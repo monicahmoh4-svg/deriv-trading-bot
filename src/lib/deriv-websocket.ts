@@ -53,6 +53,7 @@ type EventHandler = (data: unknown) => void;
 export class DerivWebSocket {
   private ws: WebSocket | null = null;
   private appId: string;
+  private clientId: string;
   private token: string | null = null;
   private subscribers: Map<string, Set<EventHandler>> = new Map();
   private pendingRequests: Map<string, { resolve: (value: unknown) => void; reject: (reason: unknown) => void }> = new Map();
@@ -63,9 +64,14 @@ export class DerivWebSocket {
   private pingInterval: ReturnType<typeof setInterval> | null = null;
   private url: string;
 
-  constructor(appId: string) {
+  constructor(appId: string, clientId?: string) {
     this.appId = appId;
-    this.url = `wss://ws.derivws.com/websockets/v3?app_id=${appId}`;
+    this.clientId = clientId || '';
+    if (this.clientId) {
+      this.url = `wss://ws.derivws.com/websockets/v3?client_id=${this.clientId}`;
+    } else {
+      this.url = `wss://ws.derivws.com/websockets/v3?app_id=${appId}`;
+    }
   }
 
   connect(): Promise<void> {
@@ -385,8 +391,9 @@ let instance: DerivWebSocket | null = null;
 
 export function getDerivWebSocket(): DerivWebSocket {
   if (!instance) {
-    const appId = process.env.NEXT_PUBLIC_DERIV_APP_ID || 'your_app_id_here';
-    instance = new DerivWebSocket(appId);
+    const appId = process.env.NEXT_PUBLIC_DERIV_APP_ID || '1014';
+    const clientId = process.env.NEXT_PUBLIC_DERIV_CLIENT_ID || '34ohVmckD1DKsGsTMRY7L';
+    instance = new DerivWebSocket(appId, clientId);
   }
   return instance;
 }
