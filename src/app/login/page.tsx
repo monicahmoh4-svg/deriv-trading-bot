@@ -13,7 +13,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tokenInput, setTokenInput] = useState('');
-  const [selectedMode, setSelectedMode] = useState<'real' | 'demo' | null>(null);
+  const [selectedMode, setSelectedMode] = useState<'real' | 'demo' | 'token' | null>(null);
 
   const clientId = process.env.NEXT_PUBLIC_DERIV_APP_ID || '';
   const redirectUri = typeof window !== 'undefined' ? window.location.origin : '';
