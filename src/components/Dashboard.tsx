@@ -41,12 +41,30 @@ export default function Dashboard() {
     const ws = getDerivWebSocket();
     try {
       await ws.connect();
-      await ws.authenticate(auth.token);
+      const authResponse = await ws.authenticate(auth.token) as {
+        balance?: number;
+        currency?: string;
+        loginid?: string;
+        email?: string;
+        fullname?: string;
+        is_virtual?: number;
+      };
 
-      const balanceData = await ws.getBalance() as { balance: number; currency: string };
-      setBalance(balanceData.balance, balanceData.currency);
+      if (authResponse) {
+        if (authResponse.balance !== undefined && authResponse.currency) {
+          setBalance(authResponse.balance, authResponse.currency);
+        } else {
+          const balanceData = await ws.getBalance() as { balance: number; currency: string };
+          setBalance(balanceData.balance, balanceData.currency);
+        }
 
-      addActivity({ type: 'info', message: 'Connected to Deriv WebSocket' });
+        const accountType = authResponse.is_virtual ? 'Demo' : 'Real';
+        const accountId = authResponse.loginid || 'Unknown';
+        addActivity({ type: 'info', message: `Connected to Deriv (${accountType}: ${accountId})` });
+        if (authResponse.email) {
+          addActivity({ type: 'info', message: `Logged in as ${authResponse.fullname || authResponse.email}` });
+        }
+      }
 
       ws.on('tick', (data) => {
         const tick = data as { symbol: string; quote: number; epoch: number };
@@ -143,10 +161,16 @@ export default function Dashboard() {
 
       addActivity({ type: 'info', message: `Subscribed to ${markets.length} markets` });
     } catch (error) {
-      addActivity({
-        type: 'error',
-        message: 'Failed to connect to Deriv WebSocket',
-      });
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      if (msg.includes('Invalid token') || msg.includes('authorize')) {
+        addActivity({ type: 'error', message: 'Authentication failed. Token may be invalid or expired.' });
+        setTimeout(() => {
+          logout();
+          router.replace('/login');
+        }, 2000);
+      } else {
+        addActivity({ type: 'error', message: `Connection failed: ${msg}` });
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.token]);

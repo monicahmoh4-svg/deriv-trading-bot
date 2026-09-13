@@ -200,13 +200,14 @@ export class DerivWebSocket {
     }
   }
 
-  authenticate(token: string): Promise<void> {
+  authenticate(token: string): Promise<unknown> {
     this.token = token;
     return this.sendRequest({
       authorize: token,
-    }).then(() => {
+    }).then((response) => {
       this.isAuthenticated = true;
-      this.emit('authenticated', {});
+      this.emit('authenticated', response);
+      return response;
     });
   }
 

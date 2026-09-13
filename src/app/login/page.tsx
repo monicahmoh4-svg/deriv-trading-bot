@@ -20,7 +20,7 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
 
   const clientId = process.env.NEXT_PUBLIC_DERIV_CLIENT_ID || '34ohVmckD1DKsGsTMRY7L';
-  const redirectUri = process.env.NEXT_PUBLIC_DERIV_REDIRECT_URI || (typeof window !== 'undefined' ? window.location.origin : '');
+  const redirectUri = 'https://deriv-trading-bot-two.vercel.app';
 
   const handleTokenExchange = useCallback(async (code: string, state: string) => {
     const storedState = getStoredState();
@@ -94,8 +94,23 @@ function LoginForm() {
 
     if (code && state) {
       handleTokenExchange(code, state);
+      return;
     }
-  }, [searchParams, auth.token, router, handleTokenExchange]);
+
+    const hash = window.location.hash;
+    if (hash) {
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const token1 = hashParams.get('token1');
+      if (token1) {
+        const storedDemo = localStorage.getItem('deriv_login_demo') === 'true';
+        setAuth(token1, storedDemo);
+        localStorage.removeItem('deriv_login_demo');
+        clearPKCEParams();
+        router.replace('/dashboard');
+        return;
+      }
+    }
+  }, [searchParams, auth.token, router, handleTokenExchange, setAuth]);
 
   const handleLogin = async (demo: boolean) => {
     setLoading(true);
@@ -112,6 +127,21 @@ function LoginForm() {
     } catch {
       setError('Failed to initialize login. Please try again.');
       setLoading(false);
+    }
+  };
+
+  const handleManualToken = async () => {
+    const token = prompt('Paste your Deriv API token (get it from https://app.deriv.com/dashboard/api-token):');
+    if (token && token.trim()) {
+      setLoading(true);
+      try {
+        setAuth(token.trim(), false);
+        router.replace('/dashboard');
+      } catch {
+        setError('Invalid token.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -136,7 +166,7 @@ function LoginForm() {
           </div>
         )}
 
-        {loading && searchParams.get('code') ? (
+        {loading && (searchParams.get('code') || window.location.hash.includes('token1=')) ? (
           <div className="text-center py-8">
             <svg className="animate-spin h-10 w-10 text-deriv-cyan mx-auto mb-4" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -184,6 +214,26 @@ function LoginForm() {
               <span className="w-3 h-3 rounded-full bg-deriv-yellow"></span>
               Login with Deriv (Demo Account)
             </button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-deriv-border"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-deriv-card text-deriv-muted">or</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleManualToken}
+              disabled={loading}
+              className="w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 border-2 border-deriv-purple/50 text-deriv-purple hover:bg-deriv-purple/10 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+              Connect with API Token
+            </button>
           </div>
         )}
 
@@ -210,7 +260,7 @@ function LoginForm() {
             <svg className="w-4 h-4 text-deriv-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
-            <span>Secure PKCE OAuth2 connection</span>
+            <span>Secure OAuth2 / API token connection</span>
           </div>
         </div>
       </div>

@@ -9,26 +9,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
+    const params = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      client_id,
+      redirect_uri,
+      code_verifier,
+    });
+
     const tokenResponse = await fetch('https://api.deriv.com/oauth2/token', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify({
-        grant_type: 'authorization_code',
-        code,
-        client_id,
-        redirect_uri,
-        code_verifier,
-      }),
+      body: params.toString(),
     });
 
-    const tokenData = await tokenResponse.json();
+    const text = await response_text(tokenResponse);
+
+    let tokenData;
+    try {
+      tokenData = JSON.parse(text);
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid response from Deriv token endpoint' },
+        { status: 502 }
+      );
+    }
 
     if (!tokenResponse.ok || tokenData.error) {
       return NextResponse.json(
         { error: tokenData.error_description || tokenData.error || 'Token exchange failed' },
         { status: tokenResponse.status || 400 }
+      );
+    }
+
+    if (!tokenData.access_token) {
+      return NextResponse.json(
+        { error: 'No access token in response' },
+        { status: 502 }
       );
     }
 
@@ -44,4 +63,8 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+async function response_text(res: Response): Promise<string> {
+  return await res.text();
 }

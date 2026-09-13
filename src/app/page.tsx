@@ -1,24 +1,60 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { useStore } from '@/lib/store';
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const token = useStore((s) => s.auth.token);
 
   useEffect(() => {
+    const code = searchParams.get('code');
+    const state = searchParams.get('state');
+    const error = searchParams.get('error');
+    const hash = window.location.hash;
+
+    if (code && state) {
+      router.replace(`/login?code=${code}&state=${state}`);
+      return;
+    }
+
+    if (error) {
+      router.replace(`/login?error=${error}`);
+      return;
+    }
+
+    if (hash && hash.includes('token1=')) {
+      router.replace(`/login${hash}`);
+      return;
+    }
+
     if (token) {
       router.replace('/dashboard');
     } else {
       router.replace('/login');
     }
-  }, [token, router]);
+  }, [token, router, searchParams]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-deriv-darker">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-deriv-cyan"></div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-deriv-darker">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-deriv-cyan"></div>
+        </div>
+      }
+    >
+      <HomeContent />
+    </Suspense>
   );
 }
