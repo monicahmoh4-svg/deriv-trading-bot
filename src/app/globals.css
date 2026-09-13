@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --deriv-dark: #0a0e17;
+  --deriv-darker: #060a12;
+  --deriv-card: #111827;
+  --deriv-cyan: #00d4ff;
+  --deriv-green: #00e676;
+  --deriv-red: #ff5252;
+}
+
+body {
+  background-color: var(--deriv-dark);
+  color: #e2e8f0;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--deriv-darker);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1e293b #060a12;
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-deriv-card/80 backdrop-blur-sm border border-deriv-border rounded-xl;
+  }
+
+  .glow-border {
+    @apply border border-deriv-cyan/30 shadow-[0_0_15px_rgba(0,212,255,0.1)];
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-deriv-cyan to-deriv-green bg-clip-text text-transparent;
+  }
+
+  .btn-primary {
+    @apply bg-deriv-cyan hover:bg-deriv-cyan/80 text-deriv-dark font-semibold py-2 px-4 rounded-lg transition-all duration-200;
+  }
+
+  .btn-danger {
+    @apply bg-deriv-red hover:bg-deriv-red/80 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200;
+  }
+
+  .input-field {
+    @apply w-full bg-deriv-darker border border-deriv-border rounded-lg px-4 py-2 text-deriv-text focus:border-deriv-cyan focus:outline-none focus:ring-1 focus:ring-deriv-cyan/50 transition-all duration-200;
+  }
+
+  .signal-buy {
+    @apply bg-deriv-green/20 text-deriv-green border border-deriv-green/30 rounded-lg px-3 py-1;
+  }
+
+  .signal-sell {
+    @apply bg-deriv-red/20 text-deriv-red border border-deriv-red/30 rounded-lg px-3 py-1;
+  }
+}
