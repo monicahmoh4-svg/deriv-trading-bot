@@ -21,8 +21,8 @@ export default function ProfitChart() {
     let cumulativePnl = 0;
 
     const sortedTrades = [...bot.trades]
-      .filter((t) => t.status === 'closed')
-      .sort((a, b) => a.closeTime! - b.closeTime);
+      .filter((t): t is typeof t & { closeTime: number } => t.status === 'closed' && t.closeTime !== undefined)
+      .sort((a, b) => a.closeTime - b.closeTime);
 
     sortedTrades.forEach((trade) => {
       cumulativePnl += trade.profitLoss || 0;
