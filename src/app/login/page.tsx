@@ -3,14 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useStore } from '@/lib/store';
-import {
-  generatePKCEParams,
-  buildAuthUrl,
-  storePKCEParams,
-  getStoredCodeVerifier,
-  getStoredState,
-  clearPKCEParams,
-} from '@/lib/pkce';
+import { getDerivWebSocket } from '@/lib/deriv-websocket';
 
 function LoginForm() {
   const router = useRouter();
@@ -18,82 +11,12 @@ function LoginForm() {
   const { setAuth, setDemo, auth } = useStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const clientId = process.env.NEXT_PUBLIC_DERIV_CLIENT_ID || '34ohVmckD1DKsGsTMRY7L';
-  const redirectUri = 'https://deriv-trading-bot-two.vercel.app';
-
-  const handleTokenExchange = useCallback(async (code: string, state: string) => {
-    const storedState = getStoredState();
-    if (state !== storedState) {
-      setError('Security validation failed. Please try again.');
-      clearPKCEParams();
-      return;
-    }
-
-    const codeVerifier = getStoredCodeVerifier();
-    if (!codeVerifier) {
-      setError('Session expired. Please try again.');
-      clearPKCEParams();
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code,
-          code_verifier: codeVerifier,
-          redirect_uri: redirectUri,
-          client_id: clientId,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || data.error) {
-        throw new Error(data.error || 'Token exchange failed');
-      }
-
-      const accessToken = data.access_token;
-      if (!accessToken) {
-        throw new Error('No access token received');
-      }
-
-      const storedDemo = localStorage.getItem('deriv_login_demo') === 'true';
-      setAuth(accessToken, storedDemo);
-      localStorage.removeItem('deriv_login_demo');
-      clearPKCEParams();
-      router.replace('/dashboard');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
-      clearPKCEParams();
-    } finally {
-      setLoading(false);
-    }
-  }, [clientId, redirectUri, setAuth, router]);
+  const [tokenInput, setTokenInput] = useState('');
+  const [selectedMode, setSelectedMode] = useState<'real' | 'demo' | null>(null);
 
   useEffect(() => {
     if (auth.token) {
       router.replace('/dashboard');
-      return;
-    }
-
-    const code = searchParams.get('code');
-    const state = searchParams.get('state');
-    const authError = searchParams.get('error');
-
-    if (authError) {
-      setError('Authorization was denied or cancelled.');
-      clearPKCEParams();
-      return;
-    }
-
-    if (code && state) {
-      handleTokenExchange(code, state);
       return;
     }
 
@@ -105,44 +28,59 @@ function LoginForm() {
         const storedDemo = localStorage.getItem('deriv_login_demo') === 'true';
         setAuth(token1, storedDemo);
         localStorage.removeItem('deriv_login_demo');
-        clearPKCEParams();
         router.replace('/dashboard');
         return;
       }
     }
-  }, [searchParams, auth.token, router, handleTokenExchange, setAuth]);
+  }, [auth.token, router, setAuth]);
 
-  const handleLogin = async (demo: boolean) => {
+  const handleConnect = useCallback(async (token: string, isDemo: boolean) => {
+    if (!token.trim()) {
+      setError('Please enter your API token.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    localStorage.setItem('deriv_login_demo', demo.toString());
-    setDemo(demo);
 
     try {
-      const { codeVerifier, codeChallenge, state } = await generatePKCEParams();
-      storePKCEParams({ codeVerifier, codeChallenge, state });
+      const ws = getDerivWebSocket();
+      await ws.connect();
+      const authResponse = await ws.authenticate(token.trim()) as {
+        error?: { code?: string; message?: string };
+        balance?: number;
+        currency?: string;
+        loginid?: string;
+        email?: string;
+        fullname?: string;
+        is_virtual?: number;
+      };
 
-      const authUrl = buildAuthUrl(clientId, redirectUri, codeChallenge, state);
-      window.location.href = authUrl;
-    } catch {
-      setError('Failed to initialize login. Please try again.');
+      if (authResponse?.error) {
+        throw new Error(authResponse.error.message || 'Invalid token');
+      }
+
+      setAuth(token.trim(), isDemo);
+
+      const accountType = authResponse?.is_virtual ? 'Demo' : 'Real';
+      const accountId = authResponse?.loginid || '';
+      router.replace('/dashboard');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Connection failed';
+      if (msg.includes('Invalid token') || msg.includes('handshake') || msg.includes('connected')) {
+        setError('Invalid or expired API token. Please check your token and try again.');
+      } else {
+        setError(`Connection failed: ${msg}`);
+      }
       setLoading(false);
     }
-  };
+  }, [setAuth, router]);
 
-  const handleManualToken = async () => {
-    const token = prompt('Paste your Deriv API token (get it from https://app.deriv.com/dashboard/api-token):');
-    if (token && token.trim()) {
-      setLoading(true);
-      try {
-        setAuth(token.trim(), false);
-        router.replace('/dashboard');
-      } catch {
-        setError('Invalid token.');
-      } finally {
-        setLoading(false);
-      }
-    }
+  const handleQuickConnect = (mode: 'real' | 'demo') => {
+    setSelectedMode(mode);
+    setDemo(mode === 'demo');
+    setTokenInput('');
+    setError(null);
   };
 
   return (
@@ -157,7 +95,7 @@ function LoginForm() {
             </div>
           </div>
           <h1 className="text-2xl font-bold text-gradient">Deriv Trading Bot</h1>
-          <p className="text-deriv-muted mt-2">Automated AI-powered algorithmic trading</p>
+          <p className="text-deriv-muted mt-2">Connect your Deriv account to start trading</p>
         </div>
 
         {error && (
@@ -166,20 +104,76 @@ function LoginForm() {
           </div>
         )}
 
-        {loading && (searchParams.get('code') || window.location.hash.includes('token1=')) ? (
-          <div className="text-center py-8">
-            <svg className="animate-spin h-10 w-10 text-deriv-cyan mx-auto mb-4" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            <p className="text-deriv-muted">Authenticating with Deriv...</p>
+        {!selectedMode ? (
+          <div className="space-y-4">
+            <button
+              onClick={() => handleQuickConnect('real')}
+              className="w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 bg-deriv-cyan hover:bg-deriv-cyan/80 text-deriv-dark flex items-center justify-center gap-2"
+            >
+              <span className="w-3 h-3 rounded-full bg-deriv-green"></span>
+              Connect Real Account
+            </button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-deriv-border"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-deriv-card text-deriv-muted">or</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => handleQuickConnect('demo')}
+              className="w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 border-2 border-deriv-yellow/50 text-deriv-yellow hover:bg-deriv-yellow/10 flex items-center justify-center gap-2"
+            >
+              <span className="w-3 h-3 rounded-full bg-deriv-yellow"></span>
+              Connect Demo Account
+            </button>
           </div>
         ) : (
           <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-deriv-darker/50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className={`w-3 h-3 rounded-full ${selectedMode === 'real' ? 'bg-deriv-green' : 'bg-deriv-yellow'}`}></span>
+                <span className="text-sm font-medium text-deriv-text">
+                  {selectedMode === 'real' ? 'Real Account' : 'Demo Account'}
+                </span>
+              </div>
+              <button
+                onClick={() => { setSelectedMode(null); setError(null); }}
+                className="text-xs text-deriv-muted hover:text-deriv-cyan transition-colors"
+              >
+                Change
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm text-deriv-muted mb-2">API Token</label>
+              <textarea
+                value={tokenInput}
+                onChange={(e) => setTokenInput(e.target.value)}
+                placeholder="Paste your Deriv API token here..."
+                className="input-field min-h-[80px] text-sm font-mono"
+                disabled={loading}
+              />
+              <p className="mt-1 text-xs text-deriv-muted">
+                Get your token from{' '}
+                <a
+                  href="https://app.deriv.com/dashboard/api-token"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-deriv-cyan hover:underline"
+                >
+                  Deriv Dashboard → API Token
+                </a>
+              </p>
+            </div>
+
             <button
-              onClick={() => handleLogin(false)}
-              disabled={loading}
-              className="w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 bg-deriv-cyan hover:bg-deriv-cyan/80 text-deriv-dark disabled:opacity-50 flex items-center justify-center gap-2"
+              onClick={() => handleConnect(tokenInput, selectedMode === 'demo')}
+              disabled={loading || !tokenInput.trim()}
+              className="w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 bg-deriv-cyan hover:bg-deriv-cyan/80 text-deriv-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -191,48 +185,20 @@ function LoginForm() {
                 </>
               ) : (
                 <>
-                  <span className="w-3 h-3 rounded-full bg-deriv-green"></span>
-                  Login with Deriv (Real Account)
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Connect to Deriv
                 </>
               )}
             </button>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-deriv-border"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-deriv-card text-deriv-muted">or</span>
-              </div>
-            </div>
-
             <button
-              onClick={() => handleLogin(true)}
+              onClick={() => { setSelectedMode(null); setError(null); setTokenInput(''); }}
               disabled={loading}
-              className="w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 border-2 border-deriv-yellow/50 text-deriv-yellow hover:bg-deriv-yellow/10 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-2 text-sm text-deriv-muted hover:text-deriv-text transition-colors"
             >
-              <span className="w-3 h-3 rounded-full bg-deriv-yellow"></span>
-              Login with Deriv (Demo Account)
-            </button>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-deriv-border"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-deriv-card text-deriv-muted">or</span>
-              </div>
-            </div>
-
-            <button
-              onClick={handleManualToken}
-              disabled={loading}
-              className="w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 border-2 border-deriv-purple/50 text-deriv-purple hover:bg-deriv-purple/10 disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-              </svg>
-              Connect with API Token
+              Back
             </button>
           </div>
         )}
@@ -242,13 +208,13 @@ function LoginForm() {
             <svg className="w-4 h-4 text-deriv-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            <span>Real-time market data analysis</span>
+            <span>Direct WebSocket connection to Deriv</span>
           </div>
           <div className="flex items-center gap-2 text-deriv-muted text-sm">
             <svg className="w-4 h-4 text-deriv-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            <span>AI-powered signal generation</span>
+            <span>Real-time AI-powered signal generation</span>
           </div>
           <div className="flex items-center gap-2 text-deriv-muted text-sm">
             <svg className="w-4 h-4 text-deriv-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -260,13 +226,13 @@ function LoginForm() {
             <svg className="w-4 h-4 text-deriv-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
-            <span>Secure OAuth2 / API token connection</span>
+            <span>Your token never leaves your browser</span>
           </div>
         </div>
       </div>
 
       <p className="text-center text-deriv-muted text-xs mt-4">
-        By logging in, you agree to the terms of service
+        By connecting, you agree to the terms of service
       </p>
     </div>
   );

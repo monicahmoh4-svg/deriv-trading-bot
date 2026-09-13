@@ -11,23 +11,17 @@ function HomeContent() {
   const token = useStore((s) => s.auth.token);
 
   useEffect(() => {
-    const code = searchParams.get('code');
-    const state = searchParams.get('state');
-    const error = searchParams.get('error');
     const hash = window.location.hash;
-
-    if (code && state) {
-      router.replace(`/login?code=${code}&state=${state}`);
-      return;
-    }
-
-    if (error) {
-      router.replace(`/login?error=${error}`);
-      return;
-    }
 
     if (hash && hash.includes('token1=')) {
       router.replace(`/login${hash}`);
+      return;
+    }
+
+    const code = searchParams.get('code');
+    const state = searchParams.get('state');
+    if (code && state) {
+      router.replace(`/login?code=${code}&state=${state}`);
       return;
     }
 
