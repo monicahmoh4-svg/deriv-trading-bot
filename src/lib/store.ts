@@ -203,6 +203,17 @@ export const useStore = create<AppState>()(
         auth: { token: state.auth.token, isDemo: state.auth.isDemo },
         rules: state.rules,
       }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<AppState>;
+        return {
+          ...currentState,
+          ...persisted,
+          auth: {
+            ...currentState.auth,
+            ...(persisted?.auth || {}),
+          },
+        };
+      },
     }
   )
 );

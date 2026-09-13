@@ -15,7 +15,7 @@ function LoginForm() {
   const [tokenInput, setTokenInput] = useState('');
   const [selectedMode, setSelectedMode] = useState<'real' | 'demo' | 'token' | null>(null);
 
-  const clientId = process.env.NEXT_PUBLIC_DERIV_APP_ID || '';
+  const clientId = process.env.NEXT_PUBLIC_DERIV_APP_ID || '34ohVmckD1DKsGsTMRY7L';
   const redirectUri = typeof window !== 'undefined' ? window.location.origin : '';
 
   const handleTokenAuth = useCallback(async (token: string, isDemo: boolean) => {
@@ -108,11 +108,6 @@ function LoginForm() {
   }, [searchParams, auth.token, router, setAuth, setDemo, clientId, redirectUri]);
 
   const handleOAuthLogin = async (demo: boolean) => {
-    if (!clientId) {
-      setError('App ID not configured. Please use API token login instead.');
-      return;
-    }
-
     setLoading(true);
     setError(null);
     localStorage.setItem('deriv_login_mode', demo ? 'demo' : 'real');
@@ -177,7 +172,7 @@ function LoginForm() {
           <div className="space-y-4">
             <button
               onClick={() => handleOAuthLogin(false)}
-              disabled={loading || !clientId}
+              disabled={loading}
               className="w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 bg-deriv-cyan hover:bg-deriv-cyan/80 text-deriv-dark disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <span className="w-3 h-3 rounded-full bg-deriv-green"></span>
@@ -195,7 +190,7 @@ function LoginForm() {
 
             <button
               onClick={() => handleOAuthLogin(true)}
-              disabled={loading || !clientId}
+              disabled={loading}
               className="w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 border-2 border-deriv-yellow/50 text-deriv-yellow hover:bg-deriv-yellow/10 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <span className="w-3 h-3 rounded-full bg-deriv-yellow"></span>

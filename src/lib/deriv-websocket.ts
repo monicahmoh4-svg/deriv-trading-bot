@@ -124,6 +124,13 @@ export class DerivWebSocket {
 
   private handleMessage(data: Record<string, unknown>): void {
     if (data.error) {
+      const reqId = data.req_id as string;
+      if (reqId && this.pendingRequests.has(reqId)) {
+        const pending = this.pendingRequests.get(reqId)!;
+        this.pendingRequests.delete(reqId);
+        const errData = data.error as { code?: string; message?: string };
+        pending.reject(new Error(errData.message || JSON.stringify(data.error)));
+      }
       this.emit('error', data.error);
       return;
     }

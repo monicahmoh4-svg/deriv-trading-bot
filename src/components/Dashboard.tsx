@@ -231,7 +231,7 @@ export default function Dashboard() {
             <div className="text-right">
               <div className="text-sm text-deriv-muted">Balance</div>
               <div className="text-lg font-bold text-deriv-cyan">
-                {auth.currency} {auth.balance.toFixed(2)}
+                {auth.currency} {(auth.balance ?? 0).toFixed(2)}
               </div>
             </div>
             <div className="text-right">
@@ -241,7 +241,7 @@ export default function Dashboard() {
                   bot.pnl >= 0 ? 'text-deriv-green' : 'text-deriv-red'
                 }`}
               >
-                {bot.pnl >= 0 ? '+' : ''}${bot.pnl.toFixed(2)}
+                {bot.pnl >= 0 ? '+' : ''}${(bot.pnl ?? 0).toFixed(2)}
               </div>
             </div>
             <BotToggle />
