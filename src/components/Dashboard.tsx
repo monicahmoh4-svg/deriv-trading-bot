@@ -66,9 +66,12 @@ export default function Dashboard() {
         if (cancelled) return;
         setConnection('connected');
 
+        const token = auth.token;
+        if (!token) return;
+
         let authResponse: Record<string, unknown>;
         try {
-          authResponse = await ws.authenticate(auth.token) as Record<string, unknown>;
+          authResponse = await ws.authenticate(token) as Record<string, unknown>;
         } catch {
           throw new Error('Authentication failed');
         }
