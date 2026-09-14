@@ -29,7 +29,7 @@ export default function MLPanel() {
         <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
           <div className="text-[10px] text-brand-muted uppercase tracking-wider">Regime</div>
           <div className="text-sm font-bold text-brand-blue mt-1 truncate">
-            {mlStats.recentRegime || '---'}
+            {mlStats.regime || '---'}
           </div>
         </div>
         <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">

@@ -43,6 +43,7 @@ export interface Trade {
   direction: 'BUY' | 'SELL';
   contractType: string;
   stake: number;
+  confidence: number;
   entryPrice: number;
   exitPrice?: number;
   profitLoss?: number;
@@ -375,6 +376,7 @@ export class TradingEngine {
       direction: signal.direction,
       contractType,
       stake,
+      confidence: signal.confidence,
       entryPrice: signal.entry_price,
       status: 'open',
       openTime: Date.now(),

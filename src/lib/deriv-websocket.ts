@@ -135,6 +135,13 @@ export class DerivWebSocket {
       return;
     }
 
+    const reqId = data.req_id as string;
+    if (reqId && this.pendingRequests.has(reqId)) {
+      const pending = this.pendingRequests.get(reqId)!;
+      this.pendingRequests.delete(reqId);
+      pending.resolve(data);
+    }
+
     if (data.authorize) {
       this.isAuthenticated = true;
       this.emit('authorized', data.authorize);
@@ -142,53 +149,34 @@ export class DerivWebSocket {
 
     if (data.tick) {
       this.emit('tick', data.tick as TickData);
-      return;
     }
 
     if (data.ohlc) {
       this.emit('candle', data.ohlc as CandleData);
-      return;
     }
 
     if (data.proposal) {
       this.emit('proposal', data.proposal as ContractProposal);
-      return;
     }
 
     if (data.proposal_open_contract) {
       this.emit('proposal_open_contract', data.proposal_open_contract);
-      return;
     }
 
     if (data.balance) {
       this.emit('balance', data.balance);
-      return;
     }
 
     if (data.portfolio) {
       this.emit('portfolio', data.portfolio);
-      return;
     }
 
     if (data.buy) {
       this.emit('buy', data.buy);
-      return;
     }
 
     if (data.sell) {
       this.emit('sell', data.sell);
-      return;
-    }
-
-    if (data.pong) {
-      return;
-    }
-
-    const reqId = data.req_id as string;
-    if (reqId && this.pendingRequests.has(reqId)) {
-      const pending = this.pendingRequests.get(reqId)!;
-      this.pendingRequests.delete(reqId);
-      pending.resolve(data);
     }
   }
 
@@ -242,14 +230,14 @@ export class DerivWebSocket {
     this.sendRequest({
       ticks: symbol,
       subscribe: 1,
-    });
+    }).catch(() => {});
   }
 
   unsubscribeTicks(symbol: string): void {
     this.sendRequest({
       ticks: symbol,
       forget: 1,
-    });
+    }).catch(() => {});
   }
 
   subscribeProposalOpenContract(contractId: number): void {
@@ -257,7 +245,7 @@ export class DerivWebSocket {
       proposal_open_contract: 1,
       contract_id: contractId,
       subscribe: 1,
-    });
+    }).catch(() => {});
   }
 
   subscribeCandles(symbol: string, count: number = 100): void {
@@ -268,7 +256,7 @@ export class DerivWebSocket {
       end: 'latest',
       style: 'candles',
       subscribe: 1,
-    });
+    }).catch(() => {});
   }
 
   async getTicksHistory(symbol: string, count: number = 1000): Promise<TickData[]> {
@@ -402,12 +390,13 @@ export class DerivWebSocket {
   }
 }
 
+export const DERIV_APP_ID = '1014';
+
 let instance: DerivWebSocket | null = null;
 
 export function getDerivWebSocket(): DerivWebSocket {
   if (!instance) {
-    const appId = process.env.NEXT_PUBLIC_DERIV_APP_ID || '1014';
-    instance = new DerivWebSocket(appId);
+    instance = new DerivWebSocket(DERIV_APP_ID);
   }
   return instance;
 }

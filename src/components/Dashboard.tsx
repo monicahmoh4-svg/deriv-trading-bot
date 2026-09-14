@@ -207,7 +207,7 @@ export default function Dashboard() {
               });
               activeTradesRef.current.delete(tradeId);
               engine.mlStrategy.recordSignalOutcome(
-                trade.direction, trade.stake, trade.symbol, trade.contractType, profit
+                trade.direction, trade.confidence, trade.symbol, trade.contractType, profit
               );
               const mlStats = engine.getMLStats();
               useStore.getState().updateMLStats({ accuracy: mlStats.accuracy, regime: mlStats.recentRegime });

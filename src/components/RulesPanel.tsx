@@ -111,9 +111,9 @@ export default function RulesPanel() {
           <span className="text-sm font-medium text-white">Auto-Trade</span>
           <button
             onClick={() => updateRules({ autoTrade: !rules.autoTrade })}
-            className={`w-10 h-5 rounded-full transition-colors duration-300 ${rules.autoTrade ? 'bg-brand-emerald' : 'bg-slate-600'}`}
+            className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${rules.autoTrade ? 'bg-brand-emerald' : 'bg-slate-600'}`}
           >
-            <div className={`w-4 h-4 rounded-full bg-white transition-transform duration-300 ${rules.autoTrade ? 'translate-x-5.5 ml-[1px]' : 'translate-x-0.5 ml-[1px]'}`} />
+            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-300 ${rules.autoTrade ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
           </button>
         </div>
       </div>
