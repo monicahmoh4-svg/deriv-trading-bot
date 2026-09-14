@@ -11,14 +11,20 @@
   --deriv-red: #ff5252;
 }
 
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   background-color: var(--deriv-dark);
   color: #e2e8f0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -37,6 +43,10 @@ body {
 * {
   scrollbar-width: thin;
   scrollbar-color: #1e293b #060a12;
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 @layer utilities {
@@ -61,7 +71,7 @@ body {
   }
 
   .input-field {
-    @apply w-full bg-deriv-darker border border-deriv-border rounded-lg px-4 py-2 text-deriv-text focus:border-deriv-cyan focus:outline-none focus:ring-1 focus:ring-deriv-cyan/50 transition-all duration-200;
+    @apply w-full bg-deriv-darker border border-deriv-border rounded-lg px-3 py-2 text-deriv-text focus:border-deriv-cyan focus:outline-none focus:ring-1 focus:ring-deriv-cyan/50 transition-all duration-200;
   }
 
   .signal-buy {
@@ -70,5 +80,32 @@ body {
 
   .signal-sell {
     @apply bg-deriv-red/20 text-deriv-red border border-deriv-red/30 rounded-lg px-3 py-1;
+  }
+}
+
+@media (max-width: 768px) {
+  .glass-card {
+    border-radius: 0.75rem;
+  }
+
+  .input-field {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+@media (min-width: 768px) {
+  .glass-card {
+    border-radius: 1rem;
   }
 }

@@ -41,22 +41,22 @@ export default function ProfitChart() {
   }, [bot.trades]);
 
   return (
-    <div className="glass-card p-6">
-      <h2 className="text-lg font-semibold text-deriv-text mb-4">Cumulative Profit</h2>
+    <div className="glass-card p-4 lg:p-6">
+      <h2 className="text-sm lg:text-base font-semibold text-deriv-text mb-3 lg:mb-4">Cumulative Profit</h2>
 
-      <div className="h-80">
+      <div className="h-48 lg:h-80">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
             <XAxis
               dataKey="time"
               stroke="#64748b"
-              fontSize={12}
+              fontSize={10}
               tickLine={false}
             />
             <YAxis
               stroke="#64748b"
-              fontSize={12}
+              fontSize={10}
               tickLine={false}
               tickFormatter={(value: number) => `$${value}`}
             />
@@ -66,6 +66,7 @@ export default function ProfitChart() {
                 border: '1px solid #1e293b',
                 borderRadius: '8px',
                 color: '#e2e8f0',
+                fontSize: 12,
               }}
               formatter={(value: number) => [`$${value.toFixed(2)}`, 'P&L']}
             />
@@ -75,15 +76,15 @@ export default function ProfitChart() {
               dataKey="pnl"
               stroke="#00d4ff"
               strokeWidth={2}
-              dot={{ fill: '#00d4ff', strokeWidth: 2, r: 4 }}
-              activeDot={{ r: 6 }}
+              dot={{ fill: '#00d4ff', strokeWidth: 2, r: 3 }}
+              activeDot={{ r: 5 }}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
       {chartData.length <= 1 && (
-        <div className="text-center text-deriv-muted text-sm mt-4">
+        <div className="text-center text-deriv-muted text-xs lg:text-sm mt-3 lg:mt-4">
           Profit data will appear here after closing trades
         </div>
       )}

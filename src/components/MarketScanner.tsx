@@ -84,20 +84,20 @@ export default function MarketScanner() {
 
   const getSignalLabel = (strength: number) => {
     if (strength >= 70) return 'Strong';
-    if (strength >= 40) return 'Medium';
+    if (strength >= 40) return 'Med';
     return 'Weak';
   };
 
   return (
-    <div className="glass-card p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-deriv-text">Market Scanner</h2>
-        <span className="text-xs text-deriv-muted">
+    <div className="glass-card p-4 lg:p-6">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm lg:text-base font-semibold text-deriv-text">Market Scanner</h2>
+        <span className="text-[10px] lg:text-xs text-deriv-muted">
           {bot.isActive ? 'Scanning...' : 'Paused'}
         </span>
       </div>
 
-      <div className="space-y-3 max-h-96 overflow-y-auto">
+      <div className="space-y-2 max-h-64 lg:max-h-96 overflow-y-auto">
         {Array.from(new Map(
           getMarketsByCategory(rules.market).map(m => [m.symbol, m])
         ).values()).map((marketDef) => {
@@ -114,19 +114,19 @@ export default function MarketScanner() {
           return (
             <div
               key={marketDef.symbol}
-              className="flex items-center justify-between p-3 bg-deriv-darker/50 rounded-lg border border-deriv-border/50 hover:border-deriv-cyan/30 transition-all duration-200"
+              className="flex items-center justify-between p-2.5 bg-deriv-darker/50 rounded-lg border border-deriv-border/50 hover:border-deriv-cyan/30 transition-all duration-200"
             >
-              <div className="flex-1">
-                <div className="text-sm font-medium text-deriv-text">{marketDef.name}</div>
-                <div className="text-xs text-deriv-muted">{marketDef.symbol}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs lg:text-sm font-medium text-deriv-text truncate">{marketDef.name}</div>
+                <div className="text-[10px] text-deriv-muted">{marketDef.symbol}</div>
               </div>
 
-              <div className="flex-1 text-right">
-                <div className="text-sm font-mono text-deriv-cyan">
+              <div className="flex-1 text-right px-2">
+                <div className="text-xs lg:text-sm font-mono text-deriv-cyan">
                   {marketData.price > 0 ? marketData.price.toFixed(5) : '---'}
                 </div>
                 <div
-                  className={`text-xs ${
+                  className={`text-[10px] lg:text-xs ${
                     marketData.change >= 0 ? 'text-deriv-green' : 'text-deriv-red'
                   }`}
                 >
@@ -135,9 +135,9 @@ export default function MarketScanner() {
                 </div>
               </div>
 
-              <div className="flex-1 text-right">
+              <div className="flex-shrink-0">
                 <span
-                  className={`inline-block px-2 py-1 rounded text-xs font-medium ${getSignalColor(
+                  className={`inline-block px-1.5 lg:px-2 py-0.5 rounded text-[10px] lg:text-xs font-medium ${getSignalColor(
                     marketData.signalStrength
                   )}`}
                 >
@@ -149,7 +149,7 @@ export default function MarketScanner() {
         })}
       </div>
 
-      <div className="mt-4 text-xs text-deriv-muted text-center">
+      <div className="mt-3 text-[10px] lg:text-xs text-deriv-muted text-center">
         Last update: {new Date(lastUpdate).toLocaleTimeString()}
       </div>
     </div>

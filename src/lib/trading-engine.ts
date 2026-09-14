@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { AdaptiveStrategy, MarketRegime, PatternType } from './ml-strategy';
 
 export interface MarketData {
   symbol: string;
@@ -21,6 +22,8 @@ export interface Signal {
     bollingerLower: number;
     bollingerMiddle: number;
   };
+  regime?: MarketRegime;
+  patterns?: PatternType[];
 }
 
 export interface TradingRules {
@@ -57,7 +60,12 @@ export interface TradeResult {
 
 export class TradingEngine {
   private markets: Map<string, MarketData> = new Map();
-  private signalThreshold = 60;
+  private signalThreshold = 55;
+  public mlStrategy: AdaptiveStrategy;
+
+  constructor() {
+    this.mlStrategy = new AdaptiveStrategy();
+  }
 
   calculateSMA(prices: number[], period: number): number[] {
     const sma: number[] = [];
@@ -78,7 +86,6 @@ export class TradingEngine {
   calculateEMA(prices: number[], period: number): number[] {
     const ema: number[] = [];
     const multiplier = 2 / (period + 1);
-
     ema[0] = prices[0];
     for (let i = 1; i < prices.length; i++) {
       ema[i] = (prices[i] - ema[i - 1]) * multiplier + ema[i - 1];
@@ -89,17 +96,14 @@ export class TradingEngine {
   calculateRSI(prices: number[], period: number = 14): number[] {
     const rsi: number[] = [];
     const changes: number[] = [];
-
     for (let i = 1; i < prices.length; i++) {
       changes.push(prices[i] - prices[i - 1]);
     }
-
     for (let i = 0; i < prices.length; i++) {
       if (i < period) {
         rsi.push(NaN);
         continue;
       }
-
       let gains = 0;
       let losses = 0;
       for (let j = i - period; j < i; j++) {
@@ -107,7 +111,6 @@ export class TradingEngine {
         if (change > 0) gains += change;
         else losses += Math.abs(change);
       }
-
       if (losses === 0) {
         rsi.push(100);
       } else {
@@ -126,24 +129,20 @@ export class TradingEngine {
     const middle = this.calculateSMA(prices, period);
     const upper: number[] = [];
     const lower: number[] = [];
-
     for (let i = 0; i < prices.length; i++) {
       if (i < period - 1) {
         upper.push(NaN);
         lower.push(NaN);
         continue;
       }
-
       let sumSqDiff = 0;
       for (let j = i - period + 1; j <= i; j++) {
         sumSqDiff += Math.pow(prices[j] - middle[i], 2);
       }
       const stdDev = Math.sqrt(sumSqDiff / period);
-
       upper.push(middle[i] + stdDevMultiplier * stdDev);
       lower.push(middle[i] - stdDevMultiplier * stdDev);
     }
-
     return { upper, middle, lower };
   }
 
@@ -154,19 +153,15 @@ export class TradingEngine {
   } {
     const fastEMA = this.calculateEMA(prices, fastPeriod);
     const slowEMA = this.calculateEMA(prices, slowPeriod);
-
     const macd: number[] = [];
     for (let i = 0; i < prices.length; i++) {
       macd.push(fastEMA[i] - slowEMA[i]);
     }
-
     const signal = this.calculateEMA(macd, signalPeriod);
-
     const histogram: number[] = [];
     for (let i = 0; i < prices.length; i++) {
       histogram.push(macd[i] - signal[i]);
     }
-
     return { macd, signal, histogram };
   }
 
@@ -197,21 +192,18 @@ export class TradingEngine {
     let buyScore = 0;
     let sellScore = 0;
 
-    // SMA Crossover
     if (prevSMA5 <= prevSMA20 && currentSMA5 > currentSMA20) {
       buyScore += 30;
     } else if (prevSMA5 >= prevSMA20 && currentSMA5 < currentSMA20) {
       sellScore += 30;
     }
 
-    // SMA Trend
     if (currentSMA5 > currentSMA20) {
       buyScore += 15;
     } else {
       sellScore += 15;
     }
 
-    // RSI
     if (currentRSI < 30) {
       buyScore += 25;
     } else if (currentRSI > 70) {
@@ -222,7 +214,6 @@ export class TradingEngine {
       sellScore += 10;
     }
 
-    // Bollinger Bands
     const currentBBUpper = bollinger.upper[lastIndex];
     const currentBBLower = bollinger.lower[lastIndex];
     if (!isNaN(currentBBUpper) && !isNaN(currentBBLower)) {
@@ -233,7 +224,6 @@ export class TradingEngine {
       }
     }
 
-    // MACD
     const currentMACD = macd.macd[lastIndex];
     const currentSignal = macd.signal[lastIndex];
     const prevMACD = macd.macd[prevIndex];
@@ -253,6 +243,8 @@ export class TradingEngine {
     if (confidence < this.signalThreshold) {
       return null;
     }
+
+    this.mlStrategy.updateRegimeHistory(prices);
 
     return {
       id: uuidv4(),
@@ -290,13 +282,6 @@ export class TradingEngine {
     const leastFrequent = digitFreq.indexOf(Math.min(...digitFreq));
     const mostFrequent = digitFreq.indexOf(Math.max(...digitFreq));
 
-    const prevDigits = prices.slice(-21, -1).map((p) => {
-      const str = p.toFixed(2);
-      return parseInt(str[str.length - 1], 10);
-    });
-
-    const prevOddCount = prevDigits.filter((d) => d % 2 === 1).length;
-
     let direction: 'BUY' | 'SELL' = 'BUY';
     let confidence = 50;
 
@@ -311,7 +296,6 @@ export class TradingEngine {
     if (lastDigits[lastDigits.length - 1] === mostFrequent) {
       confidence += 5;
     }
-
     if (lastDigits[lastDigits.length - 1] === leastFrequent) {
       confidence += 10;
     }
@@ -321,6 +305,8 @@ export class TradingEngine {
     if (confidence < this.signalThreshold) {
       return null;
     }
+
+    this.mlStrategy.updateRegimeHistory(prices);
 
     return {
       id: uuidv4(),
@@ -345,19 +331,38 @@ export class TradingEngine {
       marketData.symbol.includes('BOOM') ||
       marketData.symbol.includes('CRASH');
 
+    let baseSignal: Signal | null;
+
     if (isDigitMarket) {
-      return this.analyzeDigitPattern(marketData);
+      baseSignal = this.analyzeDigitPattern(marketData);
+    } else {
+      baseSignal = this.analyzeMarket(marketData);
     }
-    return this.analyzeMarket(marketData);
+
+    if (!baseSignal) return null;
+
+    const prices = marketData.ticks.map((t) => t.quote);
+    const adaptiveSignal = this.mlStrategy.generateAdaptiveSignal(
+      prices,
+      baseSignal.confidence,
+      baseSignal.direction,
+      baseSignal.symbol,
+      1
+    );
+
+    if (!adaptiveSignal) return null;
+
+    return {
+      ...baseSignal,
+      confidence: adaptiveSignal.confidence,
+      strategy: adaptiveSignal.strategy,
+      regime: adaptiveSignal.regime,
+      patterns: adaptiveSignal.patterns,
+    };
   }
 
   executeTrade(signal: Signal, rules: TradingRules, balance: number): TradeResult {
-    const existingTrades = 0;
-    if (existingTrades >= rules.maxTrades) {
-      return { success: false, error: 'Maximum simultaneous trades reached' };
-    }
-
-    const stake = this.calculateStake(balance, rules);
+    const stake = this.calculateStake(balance, rules, signal);
     if (stake <= 0) {
       return { success: false, error: 'Invalid stake amount' };
     }
@@ -378,42 +383,36 @@ export class TradingEngine {
     return { success: true, trade };
   }
 
-  calculateStake(currentBalance: number, rules: TradingRules): number {
-    let stake = rules.stake;
+  calculateStake(currentBalance: number, rules: TradingRules, signal?: Signal): number {
+    let baseStake = rules.stake;
 
     if (rules.strategy === 'aggressive') {
-      stake = Math.min(rules.maxStake, currentBalance * 0.05);
+      baseStake = Math.min(rules.maxStake, currentBalance * 0.05);
     } else if (rules.strategy === 'moderate') {
-      stake = Math.min(rules.maxStake, currentBalance * 0.02);
+      baseStake = Math.min(rules.maxStake, currentBalance * 0.02);
     } else {
-      stake = Math.min(rules.maxStake, currentBalance * 0.01);
+      baseStake = Math.min(rules.maxStake, currentBalance * 0.01);
     }
 
-    return Math.max(stake, rules.stake);
+    baseStake = Math.max(baseStake, rules.stake);
+
+    if (signal?.confidence) {
+      const confMultiplier = 0.5 + (signal.confidence / 100) * 1.0;
+      baseStake *= confMultiplier;
+    }
+
+    return Math.min(baseStake, rules.maxStake);
   }
 
   private getContractType(signal: Signal, rules: TradingRules): string {
     if (rules.market === 'digits') {
-      if (signal.direction === 'BUY') {
-        return 'DIGITEVEN';
-      }
-      return 'DIGITODD';
+      return signal.direction === 'BUY' ? 'DIGITEVEN' : 'DIGITODD';
     }
-
     return signal.direction === 'BUY' ? 'CALL' : 'PUT';
   }
 
   setSignalThreshold(threshold: number): void {
     this.signalThreshold = Math.min(100, Math.max(0, threshold));
-  }
-
-  updateMarketData(symbol: string, ticks: { quote: number; epoch: number }[]): void {
-    const existing = this.markets.get(symbol);
-    if (existing) {
-      existing.ticks = ticks;
-    } else {
-      this.markets.set(symbol, { symbol, ticks });
-    }
   }
 
   addTick(symbol: string, tick: { quote: number; epoch: number }): void {
@@ -434,6 +433,14 @@ export class TradingEngine {
 
   getAllMarkets(): MarketData[] {
     return Array.from(this.markets.values());
+  }
+
+  getMLStats() {
+    return {
+      accuracy: this.mlStrategy.getOverallAccuracy(),
+      strategies: this.mlStrategy.getStrategyStats(),
+      recentRegime: this.mlStrategy.getRecentRegime(),
+    };
   }
 }
 

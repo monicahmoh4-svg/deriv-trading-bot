@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Signal, Trade, TradingRules } from './trading-engine';
+import { MarketRegime, PatternType } from './ml-strategy';
 
 interface AuthState {
   token: string | null;
@@ -17,6 +18,19 @@ interface BotState {
   scannedMarkets: string[];
 }
 
+interface ConnectionState {
+  status: 'disconnected' | 'connecting' | 'connected' | 'authenticated' | 'error';
+  error: string | null;
+  lastConnected: number | null;
+}
+
+interface MLStats {
+  accuracy: number;
+  totalSignals: number;
+  regime: MarketRegime;
+  patterns: PatternType[];
+}
+
 interface ActivityEntry {
   id: string;
   timestamp: number;
@@ -30,6 +44,8 @@ interface AppState {
   rules: TradingRules;
   activities: ActivityEntry[];
   activeTab: string;
+  connection: ConnectionState;
+  mlStats: MLStats;
 
   setAuth: (token: string, isDemo: boolean) => void;
   setDemo: (isDemo: boolean) => void;
@@ -46,6 +62,9 @@ interface AppState {
   setPnl: (pnl: number) => void;
   addPnl: (amount: number) => void;
   setScannedMarkets: (markets: string[]) => void;
+
+  setConnection: (status: ConnectionState['status'], error?: string) => void;
+  updateMLStats: (stats: Partial<MLStats>) => void;
 
   updateRules: (rules: Partial<TradingRules>) => void;
 
@@ -83,6 +102,17 @@ export const useStore = create<AppState>()(
       },
       activities: [],
       activeTab: 'dashboard',
+      connection: {
+        status: 'disconnected',
+        error: null,
+        lastConnected: null,
+      },
+      mlStats: {
+        accuracy: 0,
+        totalSignals: 0,
+        regime: 'ranging',
+        patterns: [],
+      },
 
       setAuth: (token, isDemo) =>
         set((state) => ({
@@ -110,6 +140,7 @@ export const useStore = create<AppState>()(
             scannedMarkets: [],
           },
           activities: [],
+          connection: { status: 'disconnected', error: null, lastConnected: null },
         }),
 
       toggleBot: () =>
@@ -154,6 +185,12 @@ export const useStore = create<AppState>()(
             ...state.bot,
             signals: [signal, ...state.bot.signals].slice(0, 50),
           },
+          mlStats: {
+            ...state.mlStats,
+            totalSignals: state.mlStats.totalSignals + 1,
+            regime: signal.regime || state.mlStats.regime,
+            patterns: signal.patterns || state.mlStats.patterns,
+          },
         })),
 
       clearSignals: () =>
@@ -174,6 +211,20 @@ export const useStore = create<AppState>()(
       setScannedMarkets: (markets) =>
         set((state) => ({
           bot: { ...state.bot, scannedMarkets: markets },
+        })),
+
+      setConnection: (status, error) =>
+        set((state) => ({
+          connection: {
+            status,
+            error: error || null,
+            lastConnected: status === 'authenticated' ? Date.now() : state.connection.lastConnected,
+          },
+        })),
+
+      updateMLStats: (stats) =>
+        set((state) => ({
+          mlStats: { ...state.mlStats, ...stats },
         })),
 
       updateRules: (newRules) =>
