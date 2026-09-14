@@ -208,7 +208,7 @@ export default function Dashboard() {
           const profit = contract.profit || 0;
           addPnl(profit);
 
-          for (const [tradeId, trade] of activeTradesRef.current.entries()) {
+          for (const [tradeId, trade] of Array.from(activeTradesRef.current.entries())) {
             if (trade.contractId === contract.contract_id) {
               updateTrade(tradeId, {
                 exitPrice: contract.exit_tick,
