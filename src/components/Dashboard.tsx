@@ -229,7 +229,6 @@ export default function Dashboard() {
               const mlStats = engine.getMLStats();
               useStore.getState().updateMLStats({
                 accuracy: mlStats.accuracy,
-                totalSignals: mlStats.totalSignals,
                 regime: mlStats.recentRegime,
               });
 
