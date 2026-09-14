@@ -16,7 +16,7 @@ html {
 }
 
 body {
-  background-color: var(--deriv-dark);
+  background-color: var(--deriv-darker);
   color: #e2e8f0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -51,19 +51,19 @@ body {
 
 @layer utilities {
   .glass-card {
-    @apply bg-deriv-card/80 backdrop-blur-sm border border-deriv-border rounded-xl;
+    @apply bg-[#111827]/90 backdrop-blur-sm border border-[#1e293b] rounded-xl;
   }
 
   .glow-border {
-    @apply border border-deriv-cyan/30 shadow-[0_0_15px_rgba(0,212,255,0.1)];
+    @apply border border-deriv-cyan/20 shadow-[0_0_20px_rgba(0,212,255,0.08)];
   }
 
   .text-gradient {
-    @apply bg-gradient-to-r from-deriv-cyan to-deriv-green bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-deriv-cyan via-[#00b8d4] to-deriv-green bg-clip-text text-transparent;
   }
 
   .btn-primary {
-    @apply bg-deriv-cyan hover:bg-deriv-cyan/80 text-deriv-dark font-semibold py-2 px-4 rounded-lg transition-all duration-200;
+    @apply bg-gradient-to-r from-deriv-cyan to-[#00b8d4] hover:from-[#00b8d4] hover:to-deriv-cyan text-deriv-darker font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-[0_0_15px_rgba(0,212,255,0.2)];
   }
 
   .btn-danger {
@@ -71,15 +71,15 @@ body {
   }
 
   .input-field {
-    @apply w-full bg-deriv-darker border border-deriv-border rounded-lg px-3 py-2 text-deriv-text focus:border-deriv-cyan focus:outline-none focus:ring-1 focus:ring-deriv-cyan/50 transition-all duration-200;
+    @apply w-full bg-[#0a0e17] border border-[#1e293b] rounded-lg px-3 py-2 text-deriv-text focus:border-deriv-cyan focus:outline-none focus:ring-1 focus:ring-deriv-cyan/30 transition-all duration-200;
   }
 
   .signal-buy {
-    @apply bg-deriv-green/20 text-deriv-green border border-deriv-green/30 rounded-lg px-3 py-1;
+    @apply bg-deriv-green/15 text-deriv-green border border-deriv-green/25 rounded-lg px-3 py-1;
   }
 
   .signal-sell {
-    @apply bg-deriv-red/20 text-deriv-red border border-deriv-red/30 rounded-lg px-3 py-1;
+    @apply bg-deriv-red/15 text-deriv-red border border-deriv-red/25 rounded-lg px-3 py-1;
   }
 }
 
@@ -106,6 +106,6 @@ body {
 
 @media (min-width: 768px) {
   .glass-card {
-    border-radius: 1rem;
+    border-radius: 0.875rem;
   }
 }

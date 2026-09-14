@@ -252,6 +252,14 @@ export class DerivWebSocket {
     });
   }
 
+  subscribeProposalOpenContract(contractId: number): void {
+    this.sendRequest({
+      proposal_open_contract: 1,
+      contract_id: contractId,
+      subscribe: 1,
+    });
+  }
+
   subscribeCandles(symbol: string, count: number = 100): void {
     this.sendRequest({
       ticks_history: symbol,
