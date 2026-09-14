@@ -41,7 +41,7 @@ export default function MLPanel() {
         <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
           <div className="text-[10px] text-brand-muted uppercase tracking-wider">Patterns</div>
           <div className="text-lg font-bold text-white mt-1">
-            {mlStats.totalPatterns}
+            {mlStats.patterns?.length || 0}
           </div>
         </div>
       </div>

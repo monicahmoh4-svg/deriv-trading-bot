@@ -37,7 +37,7 @@ export default function TradeHistory() {
               <div key={trade.id} className="glass-card p-3">
                 <div className="flex items-center justify-between mb-1">
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold ${
-                    trade.direction === 'CALL'
+                    trade.direction === 'BUY'
                       ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
                       : 'bg-red-500/15 text-red-400 border border-red-500/25'
                   }`}>
@@ -77,7 +77,7 @@ export default function TradeHistory() {
                       <td className="px-4 py-2.5 font-medium text-white text-xs">{trade.symbol}</td>
                       <td className="px-4 py-2.5">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold ${
-                          trade.direction === 'CALL'
+                          trade.direction === 'BUY'
                             ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
                             : 'bg-red-500/15 text-red-400 border border-red-500/25'
                         }`}>

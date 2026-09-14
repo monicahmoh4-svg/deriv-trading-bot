@@ -24,7 +24,7 @@ export default function SignalPanel() {
             <div key={idx} className="glass-card p-4 card-premium">
               <div className="flex items-center justify-between mb-2">
                 <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold ${
-                  signal.direction === 'CALL'
+                  signal.direction === 'BUY'
                     ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
                     : 'bg-red-500/15 text-red-400 border border-red-500/25'
                 }`}>

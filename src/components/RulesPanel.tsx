@@ -1,12 +1,23 @@
 'use client';
 
 import { useStore } from '@/lib/store';
+import { TradingRules } from '@/lib/trading-engine';
 
 export default function RulesPanel() {
   const { rules, updateRules } = useStore();
 
-  const marketOptions = ['Major Pairs', 'Forex', 'Indices', 'Commodities', 'Synthetics'];
-  const strategyOptions = ['moderate', 'aggressive', 'conservative'];
+  const marketOptions = [
+    { value: 'all', label: 'All Markets' },
+    { value: 'synthetic', label: 'Synthetics' },
+    { value: 'forex', label: 'Forex' },
+    { value: 'commodities', label: 'Commodities' },
+    { value: 'digits', label: 'Digits (Boom/Crash)' },
+  ];
+  const strategyOptions = [
+    { value: 'conservative', label: 'Conservative' },
+    { value: 'moderate', label: 'Moderate' },
+    { value: 'aggressive', label: 'Aggressive' },
+  ];
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-2xl">
@@ -17,11 +28,11 @@ export default function RulesPanel() {
           <label className="block text-xs font-semibold text-brand-muted uppercase tracking-wider mb-1.5">Market Category</label>
           <select
             value={rules.market}
-            onChange={(e) => updateRules({ market: e.target.value })}
+            onChange={(e) => updateRules({ market: e.target.value as TradingRules['market'] })}
             className="input-field"
           >
             {marketOptions.map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
         </div>
@@ -30,11 +41,11 @@ export default function RulesPanel() {
           <label className="block text-xs font-semibold text-brand-muted uppercase tracking-wider mb-1.5">Strategy Preset</label>
           <select
             value={rules.strategy}
-            onChange={(e) => updateRules({ strategy: e.target.value })}
+            onChange={(e) => updateRules({ strategy: e.target.value as TradingRules['strategy'] })}
             className="input-field"
           >
             {strategyOptions.map((opt) => (
-              <option key={opt} value={opt}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</option>
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
         </div>
