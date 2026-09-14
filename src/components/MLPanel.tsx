@@ -3,76 +3,51 @@
 import { useStore } from '@/lib/store';
 
 export default function MLPanel() {
-  const { mlStats, bot } = useStore();
-
-  const regimeLabels: Record<string, { label: string; color: string }> = {
-    trending_up: { label: 'Trending Up', color: 'text-deriv-green' },
-    trending_down: { label: 'Trending Down', color: 'text-deriv-red' },
-    ranging: { label: 'Ranging', color: 'text-deriv-yellow' },
-    volatile: { label: 'Volatile', color: 'text-deriv-purple' },
-    breakout: { label: 'Breakout', color: 'text-deriv-cyan' },
-  };
-
-  const regime = regimeLabels[mlStats.regime] || { label: 'Unknown', color: 'text-deriv-muted' };
+  const { mlStats } = useStore();
 
   return (
-    <div className="glass-card p-4 lg:p-6">
-      <h2 className="text-base lg:text-lg font-semibold text-deriv-text mb-4">AI Strategy Engine</h2>
+    <div className="glass-card p-4 sm:p-6 card-premium">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+          <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          ML Strategy
+        </h2>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[10px] font-semibold">
+          Active
+        </span>
+      </div>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-deriv-darker/50 rounded-lg p-3">
-          <div className="text-xs text-deriv-muted mb-1">Accuracy</div>
-          <div className="text-xl font-bold text-deriv-cyan">{mlStats.accuracy}%</div>
-        </div>
-        <div className="bg-deriv-darker/50 rounded-lg p-3">
-          <div className="text-xs text-deriv-muted mb-1">Total Signals</div>
-          <div className="text-xl font-bold text-deriv-text">{mlStats.totalSignals}</div>
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex items-center justify-between p-2 bg-deriv-darker/30 rounded-lg">
-          <span className="text-xs text-deriv-muted">Market Regime</span>
-          <span className={`text-sm font-medium ${regime.color}`}>{regime.label}</span>
-        </div>
-
-        <div className="flex items-center justify-between p-2 bg-deriv-darker/30 rounded-lg">
-          <span className="text-xs text-deriv-muted">Active Trades</span>
-          <span className="text-sm font-medium text-deriv-text">
-            {bot.trades.filter((t) => t.status === 'open').length}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between p-2 bg-deriv-darker/30 rounded-lg">
-          <span className="text-xs text-deriv-muted">Bot Status</span>
-          <span className={`text-sm font-medium ${bot.isActive ? 'text-deriv-green' : 'text-deriv-muted'}`}>
-            {bot.isActive ? 'Scanning' : 'Paused'}
-          </span>
-        </div>
-      </div>
-
-      {mlStats.patterns.length > 0 && (
-        <div className="mt-4">
-          <div className="text-xs text-deriv-muted mb-2">Detected Patterns</div>
-          <div className="flex flex-wrap gap-1">
-            {mlStats.patterns.map((p, i) => (
-              <span
-                key={i}
-                className="text-[10px] px-2 py-0.5 bg-deriv-cyan/10 text-deriv-cyan rounded-full border border-deriv-cyan/20"
-              >
-                {p.replace(/_/g, ' ')}
-              </span>
-            ))}
+        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
+          <div className="text-[10px] text-brand-muted uppercase tracking-wider">Accuracy</div>
+          <div className="text-lg font-bold text-brand-emerald mt-1">
+            {mlStats.accuracy}%
           </div>
         </div>
-      )}
+        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
+          <div className="text-[10px] text-brand-muted uppercase tracking-wider">Regime</div>
+          <div className="text-sm font-bold text-brand-blue mt-1 truncate">
+            {mlStats.recentRegime || '---'}
+          </div>
+        </div>
+        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
+          <div className="text-[10px] text-brand-muted uppercase tracking-wider">Signals</div>
+          <div className="text-lg font-bold text-white mt-1">
+            {mlStats.totalSignals}
+          </div>
+        </div>
+        <div className="bg-white/[0.03] border border-white/5 rounded-xl p-3">
+          <div className="text-[10px] text-brand-muted uppercase tracking-wider">Patterns</div>
+          <div className="text-lg font-bold text-white mt-1">
+            {mlStats.totalPatterns}
+          </div>
+        </div>
+      </div>
 
-      <div className="mt-4 p-2 bg-deriv-darker/30 rounded-lg">
-        <div className="text-[10px] text-deriv-muted mb-1">ML Adaptive Strategy</div>
-        <p className="text-xs text-deriv-text leading-relaxed">
-          Uses regime detection, pattern recognition, and historical performance
-          to adapt signal thresholds and stake sizing for optimal risk-adjusted returns.
-        </p>
+      <div className="pt-3 border-t border-white/5">
+        <div className="text-[10px] text-brand-muted text-center">Adaptive algorithm learns from every trade outcome</div>
       </div>
     </div>
   );

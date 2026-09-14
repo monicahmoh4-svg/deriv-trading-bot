@@ -27,13 +27,8 @@ export default function MarketScanner() {
 
     marketList.forEach((m) => {
       marketMap.set(m.symbol, {
-        symbol: m.symbol,
-        name: m.name,
-        price: 0,
-        change: 0,
-        changePercent: 0,
-        lastUpdate: 0,
-        signalStrength: 0,
+        symbol: m.symbol, name: m.name, price: 0, change: 0,
+        changePercent: 0, lastUpdate: 0, signalStrength: 0,
       });
     });
 
@@ -55,10 +50,7 @@ export default function MarketScanner() {
     };
 
     ws.on('tick', handleTick);
-
-    return () => {
-      ws.off('tick', handleTick);
-    };
+    return () => { ws.off('tick', handleTick); };
   }, [rules.market]);
 
   useEffect(() => {
@@ -72,14 +64,13 @@ export default function MarketScanner() {
         }))
       );
     }, 2000);
-
     return () => clearInterval(interval);
   }, [bot.isActive]);
 
   const getSignalColor = (strength: number) => {
-    if (strength >= 70) return 'text-deriv-green bg-deriv-green/20';
-    if (strength >= 40) return 'text-deriv-yellow bg-deriv-yellow/20';
-    return 'text-deriv-red bg-deriv-red/20';
+    if (strength >= 70) return 'text-emerald-400 bg-emerald-500/15';
+    if (strength >= 40) return 'text-yellow-400 bg-yellow-500/15';
+    return 'text-red-400 bg-red-500/15';
   };
 
   const getSignalLabel = (strength: number) => {
@@ -89,58 +80,50 @@ export default function MarketScanner() {
   };
 
   return (
-    <div className="glass-card p-4 lg:p-6">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm lg:text-base font-semibold text-deriv-text">Market Scanner</h2>
-        <span className="text-[10px] lg:text-xs text-deriv-muted">
-          {bot.isActive ? 'Scanning...' : 'Paused'}
-        </span>
+    <div className="glass-card p-4 sm:p-6 card-premium">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+          <svg className="w-4 h-4 text-brand-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          Market Scanner
+        </h2>
+        <div className="flex items-center gap-1.5">
+          <div className={`w-1.5 h-1.5 rounded-full ${bot.isActive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+          <span className="text-[10px] text-brand-muted">{bot.isActive ? 'Live' : 'Paused'}</span>
+        </div>
       </div>
 
-      <div className="space-y-2 max-h-64 lg:max-h-96 overflow-y-auto">
+      <div className="space-y-2 max-h-64 sm:max-h-96 overflow-y-auto pr-1">
         {Array.from(new Map(
           getMarketsByCategory(rules.market).map(m => [m.symbol, m])
         ).values()).map((marketDef) => {
           const marketData = markets.find(m => m.symbol === marketDef.symbol) || {
-            symbol: marketDef.symbol,
-            name: marketDef.name,
-            price: 0,
-            change: 0,
-            changePercent: 0,
-            lastUpdate: 0,
-            signalStrength: 0,
+            symbol: marketDef.symbol, name: marketDef.name, price: 0,
+            change: 0, changePercent: 0, lastUpdate: 0, signalStrength: 0,
           };
 
           return (
             <div
               key={marketDef.symbol}
-              className="flex items-center justify-between p-2.5 bg-deriv-darker/50 rounded-lg border border-deriv-border/50 hover:border-deriv-cyan/30 transition-all duration-200"
+              className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-white/[0.03] border border-white/5 hover:border-brand-blue/20 transition-all duration-200 group"
             >
               <div className="flex-1 min-w-0">
-                <div className="text-xs lg:text-sm font-medium text-deriv-text truncate">{marketDef.name}</div>
-                <div className="text-[10px] text-deriv-muted">{marketDef.symbol}</div>
+                <div className="text-xs sm:text-sm font-semibold text-white truncate group-hover:text-brand-blue transition-colors">{marketDef.name}</div>
+                <div className="text-[10px] text-brand-muted">{marketDef.symbol}</div>
               </div>
 
-              <div className="flex-1 text-right px-2">
-                <div className="text-xs lg:text-sm font-mono text-deriv-cyan">
+              <div className="flex-1 text-center px-2">
+                <div className="text-xs sm:text-sm font-mono text-brand-blue font-medium">
                   {marketData.price > 0 ? marketData.price.toFixed(5) : '---'}
                 </div>
-                <div
-                  className={`text-[10px] lg:text-xs ${
-                    marketData.change >= 0 ? 'text-deriv-green' : 'text-deriv-red'
-                  }`}
-                >
-                  {marketData.change >= 0 ? '+' : ''}
-                  {marketData.change.toFixed(5)}
+                <div className={`text-[10px] sm:text-xs font-medium ${marketData.change >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {marketData.change >= 0 ? '+' : ''}{marketData.change.toFixed(5)}
                 </div>
               </div>
 
               <div className="flex-shrink-0">
-                <span
-                  className={`inline-block px-1.5 lg:px-2 py-0.5 rounded text-[10px] lg:text-xs font-medium ${getSignalColor(
-                    marketData.signalStrength
-                  )}`}
-                >
+                <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-semibold ${getSignalColor(marketData.signalStrength)}`}>
                   {bot.isActive ? getSignalLabel(marketData.signalStrength) : '---'}
                 </span>
               </div>
@@ -149,7 +132,7 @@ export default function MarketScanner() {
         })}
       </div>
 
-      <div className="mt-3 text-[10px] lg:text-xs text-deriv-muted text-center">
+      <div className="mt-3 text-[10px] text-brand-muted text-center">
         Last update: {new Date(lastUpdate).toLocaleTimeString()}
       </div>
     </div>

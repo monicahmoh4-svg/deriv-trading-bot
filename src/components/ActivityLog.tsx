@@ -3,63 +3,35 @@
 import { useStore } from '@/lib/store';
 
 export default function ActivityLog() {
-  const { activities, clearActivities } = useStore();
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'scan': return 'S';
-      case 'signal': return '!';
-      case 'trade': return 'T';
-      case 'error': return 'X';
-      default: return 'i';
-    }
-  };
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'scan': return 'text-deriv-blue bg-deriv-blue/20';
-      case 'signal': return 'text-deriv-cyan bg-deriv-cyan/20';
-      case 'trade': return 'text-deriv-green bg-deriv-green/20';
-      case 'error': return 'text-deriv-red bg-deriv-red/20';
-      default: return 'text-deriv-muted bg-deriv-muted/20';
-    }
-  };
+  const { activities } = useStore();
 
   return (
-    <div className="glass-card p-4 lg:p-6">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm lg:text-base font-semibold text-deriv-text">Activity Log</h2>
-        {activities.length > 0 && (
-          <button
-            onClick={clearActivities}
-            className="text-[10px] lg:text-xs text-deriv-muted hover:text-deriv-red transition-colors"
-          >
-            Clear
-          </button>
-        )}
+    <div className="glass-card p-4 sm:p-6 card-premium">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+          <svg className="w-4 h-4 text-brand-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Activity Log
+        </h2>
+        <span className="text-[10px] text-brand-muted">{activities.length} events</span>
       </div>
 
-      <div className="space-y-1.5 max-h-48 lg:max-h-96 overflow-y-auto">
+      <div className="space-y-1.5 max-h-64 sm:max-h-96 overflow-y-auto pr-1">
         {activities.length === 0 ? (
-          <div className="text-center text-deriv-muted py-6 lg:py-8 text-sm">
-            No activity yet
-          </div>
+          <p className="text-brand-muted text-xs text-center py-4">No activity yet.</p>
         ) : (
-          activities.map((activity) => (
-            <div
-              key={activity.id}
-              className="flex items-start gap-2 p-1.5 lg:p-2 rounded-lg hover:bg-deriv-darker/50 transition-colors"
-            >
-              <div className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${getTypeColor(activity.type)}`}>
-                {getTypeIcon(activity.type)}
-              </div>
+          activities.slice().reverse().map((activity, idx) => (
+            <div key={idx} className="flex items-start gap-2 p-2 rounded-lg hover:bg-white/[0.02] transition-colors">
+              <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${
+                activity.type === 'signal' ? 'bg-brand-blue'
+                  : activity.type === 'trade' ? 'bg-brand-emerald'
+                    : activity.type === 'error' ? 'bg-red-400'
+                      : 'bg-slate-500'
+              }`} />
               <div className="flex-1 min-w-0">
-                <p className={`text-xs lg:text-sm leading-snug ${getTypeColor(activity.type).split(' ')[0]}`}>
-                  {activity.message}
-                </p>
-                <p className="text-[10px] lg:text-xs text-deriv-muted">
-                  {new Date(activity.timestamp).toLocaleTimeString()}
-                </p>
+                <div className="text-xs text-brand-text leading-relaxed truncate">{activity.message}</div>
+                <div className="text-[10px] text-brand-muted mt-0.5">{activity.timestamp.toLocaleTimeString()}</div>
               </div>
             </div>
           ))

@@ -7,18 +7,18 @@ import DashboardComponent from '@/components/Dashboard';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const token = useStore((s) => s.auth.token);
+  const { auth } = useStore();
 
   useEffect(() => {
-    if (!token) {
+    if (!auth.token) {
       router.replace('/login');
     }
-  }, [token, router]);
+  }, [auth.token, router]);
 
-  if (!token) {
+  if (!auth.token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-deriv-darker">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-deriv-cyan"></div>
+      <div className="min-h-screen bg-brand-dark flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }

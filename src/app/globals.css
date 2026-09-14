@@ -2,47 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --deriv-dark: #0a0e17;
-  --deriv-darker: #060a12;
-  --deriv-card: #111827;
-  --deriv-cyan: #00d4ff;
-  --deriv-green: #00e676;
-  --deriv-red: #ff5252;
-}
-
 html {
   -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
 }
 
 body {
-  background-color: var(--deriv-darker);
-  color: #e2e8f0;
+  background-color: #0f172a;
+  color: #f1f5f9;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--deriv-darker);
+  background: #0f172a;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 3px;
+  background: #334155;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #475569;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #1e293b #060a12;
+  scrollbar-color: #334155 #0f172a;
 }
 
 .safe-bottom {
@@ -50,62 +42,103 @@ body {
 }
 
 @layer utilities {
+  .glass-dark {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
   .glass-card {
-    @apply bg-[#111827]/90 backdrop-blur-sm border border-[#1e293b] rounded-xl;
+    background: rgba(30, 41, 59, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
   }
 
-  .glow-border {
-    @apply border border-deriv-cyan/20 shadow-[0_0_20px_rgba(0,212,255,0.08)];
+  .gradient-text {
+    background: linear-gradient(135deg, #3b82f6, #10b981);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
-  .text-gradient {
-    @apply bg-gradient-to-r from-deriv-cyan via-[#00b8d4] to-deriv-green bg-clip-text text-transparent;
+  .card-premium {
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+
+  .card-premium:hover {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
   }
 
   .btn-primary {
-    @apply bg-gradient-to-r from-deriv-cyan to-[#00b8d4] hover:from-[#00b8d4] hover:to-deriv-cyan text-deriv-darker font-semibold py-2 px-4 rounded-lg transition-all duration-200 shadow-[0_0_15px_rgba(0,212,255,0.2)];
+    background: linear-gradient(135deg, #3b82f6, #10b981);
+    color: white;
+    font-weight: 600;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.75rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
   }
 
-  .btn-danger {
-    @apply bg-deriv-red hover:bg-deriv-red/80 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200;
+  .btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+    transform: translateY(-1px);
   }
 
   .input-field {
-    @apply w-full bg-[#0a0e17] border border-[#1e293b] rounded-lg px-3 py-2 text-deriv-text focus:border-deriv-cyan focus:outline-none focus:ring-1 focus:ring-deriv-cyan/30 transition-all duration-200;
+    width: 100%;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    padding: 0.625rem 0.875rem;
+    color: #f1f5f9;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+  }
+
+  .input-field:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+
+  .input-field::placeholder {
+    color: #64748b;
   }
 
   .signal-buy {
-    @apply bg-deriv-green/15 text-deriv-green border border-deriv-green/25 rounded-lg px-3 py-1;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
   }
 
   .signal-sell {
-    @apply bg-deriv-red/15 text-deriv-red border border-deriv-red/25 rounded-lg px-3 py-1;
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
   }
 }
 
 @media (max-width: 768px) {
   .glass-card {
-    border-radius: 0.75rem;
-  }
-
-  .input-field {
-    font-size: 0.875rem;
-    padding: 0.5rem 0.75rem;
-  }
-
-  input[type="number"] {
-    -moz-appearance: textfield;
-  }
-
-  input[type="number"]::-webkit-outer-spin-button,
-  input[type="number"]::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+    border-radius: 0.875rem;
   }
 }
 
 @media (min-width: 768px) {
   .glass-card {
-    border-radius: 0.875rem;
+    border-radius: 1rem;
   }
 }

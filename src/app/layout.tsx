@@ -5,22 +5,22 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Deriv Trading Bot - AI-Powered Automated Trading',
-  description: 'AI-powered automated trading bot for Deriv platform with machine learning and adaptive strategies',
+  title: 'DerivBot - AI-Powered Trading',
+  description: 'AI-powered automated trading bot for Deriv with machine learning and adaptive strategies',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Deriv Bot',
+    title: 'DerivBot',
   },
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: '#060a12',
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: '#0f172a',
   viewportFit: 'cover',
 };
 
@@ -31,7 +31,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.className} bg-deriv-darker text-deriv-text min-h-screen`}>
+      <body className={`${inter.className} bg-brand-dark text-brand-text min-h-screen antialiased`}>
         {children}
       </body>
     </html>
