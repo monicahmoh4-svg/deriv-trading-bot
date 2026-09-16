@@ -230,7 +230,7 @@ export class AdaptiveStrategy {
 
     adjustedConfidence = Math.min(100, Math.max(0, adjustedConfidence));
 
-    if (adjustedConfidence < 50) {
+    if (adjustedConfidence < 40) {
       return null;
     }
 

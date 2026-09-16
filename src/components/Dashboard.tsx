@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { getDerivWebSocket } from '@/lib/deriv-websocket';
 import { TradingEngine, getMarketsByCategory, Trade } from '@/lib/trading-engine';
-import BotToggle from './BotToggle';
 import MarketScanner from './MarketScanner';
 import SignalPanel from './SignalPanel';
 import TradeHistory from './TradeHistory';
@@ -43,6 +42,7 @@ export default function Dashboard() {
   const authRef = useRef(auth);
   const activeTradesRef = useRef<Map<string, Trade>>(new Map());
   const subscribedRef = useRef(false);
+  const engineRef = useRef(engine);
 
   useEffect(() => { botRef.current = bot; }, [bot]);
   useEffect(() => { rulesRef.current = rules; }, [rules]);
@@ -87,19 +87,14 @@ export default function Dashboard() {
         setConnection('authenticated');
 
         const authorizeData = authResponse?.authorize as Record<string, unknown> | undefined;
-        const balanceData = authResponse?.balance as { balance?: number; currency?: string } | undefined;
 
-        if (balanceData && typeof balanceData.balance === 'number' && balanceData.currency) {
-          setBalance(balanceData.balance, balanceData.currency);
-        } else {
-          try {
-            const bal = await ws.getBalance() as { balance?: number; currency?: string };
-            if (bal && typeof bal.balance === 'number' && bal.currency) {
-              setBalance(bal.balance, bal.currency);
-            }
-          } catch {
-            setBalance(0, 'USD');
+        try {
+          const bal = await ws.getBalance() as { balance?: number; currency?: string };
+          if (bal && typeof bal.balance === 'number' && bal.currency) {
+            setBalance(bal.balance, bal.currency);
           }
+        } catch {
+          setBalance(0, 'USD');
         }
 
         const accountType = authorizeData?.is_virtual ? 'Demo' : 'Real';
@@ -125,16 +120,16 @@ export default function Dashboard() {
 
       const handleTick = (data: unknown) => {
         const tick = data as { symbol: string; quote: number; epoch: number };
-        engine.addTick(tick.symbol, { quote: tick.quote, epoch: tick.epoch });
+        engineRef.current.addTick(tick.symbol, { quote: tick.quote, epoch: tick.epoch });
 
         const currentBot = botRef.current;
         const currentRules = rulesRef.current;
         const currentAuth = authRef.current;
 
         if (currentBot.isActive) {
-          const marketData = engine.getMarketData(tick.symbol);
-          if (marketData && marketData.ticks.length >= 30) {
-            const signal = engine.generateSignal(marketData);
+          const marketData = engineRef.current.getMarketData(tick.symbol);
+          if (marketData && marketData.ticks.length >= 15) {
+            const signal = engineRef.current.generateSignal(marketData);
             if (signal) {
               addSignal(signal);
               addActivity({
@@ -142,8 +137,8 @@ export default function Dashboard() {
                 message: `Signal: ${signal.direction} ${signal.symbol} (${signal.confidence}%) [${signal.strategy}]`,
               });
 
-              if (currentRules.autoTrade && signal.confidence >= 60) {
-                const result = engine.executeTrade(signal, currentRules, currentAuth.balance);
+              if (currentRules.autoTrade && signal.confidence >= 45) {
+                const result = engineRef.current.executeTrade(signal, currentRules, currentAuth.balance);
                 if (result.success && result.trade) {
                   const trade = result.trade;
                   addTrade(trade);
@@ -206,10 +201,10 @@ export default function Dashboard() {
                 status: 'closed', closeTime: Date.now(),
               });
               activeTradesRef.current.delete(tradeId);
-              engine.mlStrategy.recordSignalOutcome(
+              engineRef.current.mlStrategy.recordSignalOutcome(
                 trade.direction, trade.confidence, trade.symbol, trade.contractType, profit
               );
-              const mlStats = engine.getMLStats();
+              const mlStats = engineRef.current.getMLStats();
               useStore.getState().updateMLStats({ accuracy: mlStats.accuracy, regime: mlStats.recentRegime });
               break;
             }
@@ -263,30 +258,29 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-brand-dark">
-      {/* Navbar */}
-      <nav className="sticky top-0 z-50 bg-brand-dark/80 backdrop-blur-lg border-b border-white/5 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-14 sm:h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-brand-blue to-brand-emerald flex items-center justify-center shadow-lg shadow-brand-blue/20">
-                <svg className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div className="min-h-screen bg-brand-dark pb-20 md:pb-0">
+      {/* Top Navbar */}
+      <nav className="sticky top-0 z-50 bg-brand-dark/90 backdrop-blur-lg border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between h-14">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-blue to-brand-emerald flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
               </div>
-              <span className="text-lg sm:text-xl font-bold gradient-text">DerivBot</span>
+              <span className="text-base font-bold gradient-text">DerivBot</span>
             </div>
 
-            {/* Desktop Nav Links */}
+            {/* Desktop center nav */}
             <div className="hidden md:flex items-center gap-1">
               {navItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     activeTab === item.id
-                      ? 'bg-gradient-to-r from-brand-blue/20 to-brand-emerald/10 text-brand-blue border border-brand-blue/20'
+                      ? 'bg-brand-blue/15 text-brand-blue border border-brand-blue/20'
                       : 'text-brand-muted hover:text-white hover:bg-white/5'
                   }`}
                 >
@@ -298,113 +292,73 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Desktop Right */}
+            {/* Desktop right */}
             <div className="hidden md:flex items-center gap-3">
               <ConnectionStatus />
               <div className="w-px h-5 bg-white/10" />
               <div className="text-right">
-                <div className="text-[10px] text-brand-muted uppercase tracking-wider">Balance</div>
-                <div className="text-sm font-bold text-brand-emerald">
-                  {auth.currency} {(auth.balance ?? 0).toFixed(2)}
-                </div>
+                <div className="text-[10px] text-brand-muted leading-none">Balance</div>
+                <div className="text-sm font-bold text-brand-emerald">{auth.currency} {(auth.balance ?? 0).toFixed(2)}</div>
               </div>
               <div className="text-right">
-                <div className="text-[10px] text-brand-muted uppercase tracking-wider">P&L</div>
+                <div className="text-[10px] text-brand-muted leading-none">P&L</div>
                 <div className={`text-sm font-bold ${(bot.pnl ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {(bot.pnl ?? 0) >= 0 ? '+' : ''}${(bot.pnl ?? 0).toFixed(2)}
                 </div>
               </div>
-              <div className="w-px h-5 bg-white/10" />
-              <BotToggle />
               <button
-                onClick={handleLogout}
-                className="text-brand-muted hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-500/10"
-                title="Logout"
+                onClick={() => setBotActive(!bot.isActive)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                  bot.isActive
+                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                    : 'bg-gradient-to-r from-brand-blue to-brand-emerald text-white shadow-lg shadow-brand-blue/20'
+                }`}
               >
+                <div className={`w-2 h-2 rounded-full ${bot.isActive ? 'bg-white animate-pulse' : 'bg-white/60'}`} />
+                {bot.isActive ? 'STOP BOT' : 'START BOT'}
+              </button>
+              <button onClick={handleLogout} className="text-brand-muted hover:text-red-400 p-2 rounded-lg hover:bg-red-500/10 transition-colors" title="Logout">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
               </button>
             </div>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile: connection + hamburger */}
             <div className="flex md:hidden items-center gap-2">
               <ConnectionStatus />
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 rounded-lg text-brand-muted hover:text-white hover:bg-white/5"
-              >
+              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 rounded-lg text-brand-muted hover:text-white">
                 {mobileMenuOpen ? (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 ) : (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
                 )}
               </button>
             </div>
           </div>
 
-          {/* Mobile Menu */}
+          {/* Mobile dropdown */}
           {mobileMenuOpen && (
-            <div className="md:hidden pb-4 border-t border-white/5 mt-2 pt-3">
-              <div className="flex items-center justify-between mb-3 px-1">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                      auth.isDemo
-                        ? 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/25'
-                        : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
-                    }`}
-                  >
-                    {auth.isDemo ? 'DEMO' : 'REAL'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <div className="text-[9px] text-brand-muted">Balance</div>
-                    <div className="text-[11px] font-bold text-brand-emerald">{auth.currency} {(auth.balance ?? 0).toFixed(2)}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-[9px] text-brand-muted">P&L</div>
-                    <div className={`text-[11px] font-bold ${(bot.pnl ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {(bot.pnl ?? 0) >= 0 ? '+' : ''}${(bot.pnl ?? 0).toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-1">
-                {navItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => { setActiveTab(item.id); setMobileMenuOpen(false); }}
-                    className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                      activeTab === item.id
-                        ? 'bg-gradient-to-r from-brand-blue/20 to-brand-emerald/10 text-brand-blue'
-                        : 'text-brand-muted hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
-                    </svg>
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-3 pt-3 border-t border-white/5 flex items-center gap-2">
-                <BotToggle />
-                <div className="flex-1" />
+            <div className="md:hidden pb-3 border-t border-white/5 pt-2 space-y-1">
+              {navItems.map((item) => (
                 <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10"
+                  key={item.id}
+                  onClick={() => { setActiveTab(item.id); setMobileMenuOpen(false); }}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                    activeTab === item.id ? 'bg-brand-blue/15 text-brand-blue' : 'text-brand-muted hover:text-white'
+                  }`}
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
                   </svg>
-                  Logout
+                  {item.label}
                 </button>
+              ))}
+              <div className="flex items-center justify-between px-3 pt-2 border-t border-white/5 mt-2">
+                <div className="text-xs text-brand-muted">
+                  {auth.currency} <span className="text-brand-emerald font-bold">{(auth.balance ?? 0).toFixed(2)}</span>
+                </div>
+                <button onClick={handleLogout} className="text-xs text-red-400">Logout</button>
               </div>
             </div>
           )}
@@ -412,14 +366,47 @@ export default function Dashboard() {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <main className="max-w-7xl mx-auto px-4 py-4">
         {activeTab === 'dashboard' && (
-          <div className="space-y-4 sm:space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-              <MarketScanner />
+          <div className="space-y-4">
+            {/* Bot Status Banner */}
+            <div className={`glass-card p-4 flex items-center justify-between ${bot.isActive ? 'border border-emerald-500/30' : 'border border-white/5'}`}>
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${bot.isActive ? 'bg-emerald-500/20' : 'bg-white/5'}`}>
+                  {bot.isActive ? (
+                    <svg className="w-5 h-5 text-emerald-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-brand-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white">{bot.isActive ? 'Bot Active' : 'Bot Inactive'}</div>
+                  <div className="text-[11px] text-brand-muted">
+                    {bot.isActive ? `Scanning ${getMarketsByCategory(rules.market).length} markets` : 'Click Start Bot to begin trading'}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setBotActive(!bot.isActive)}
+                className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                  bot.isActive
+                    ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
+                    : 'bg-gradient-to-r from-brand-blue to-brand-emerald text-white shadow-lg shadow-brand-blue/25 hover:shadow-brand-blue/40'
+                }`}
+              >
+                {bot.isActive ? 'STOP' : 'START BOT'}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <MarketScanner engine={engineRef.current} />
               <ActivityLog />
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <ProfitChart />
               <MLPanel />
             </div>
@@ -429,6 +416,43 @@ export default function Dashboard() {
         {activeTab === 'trades' && <TradeHistory />}
         {activeTab === 'settings' && <RulesPanel />}
       </main>
+
+      {/* Fixed Bottom Tab Bar (Mobile) */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-brand-dark/95 backdrop-blur-lg border-t border-white/5 safe-bottom">
+        <div className="flex items-center justify-around h-14 px-2">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors min-w-0 ${
+                activeTab === item.id ? 'text-brand-blue' : 'text-brand-muted'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+              </svg>
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </button>
+          ))}
+          <button
+            onClick={() => setBotActive(!bot.isActive)}
+            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg min-w-0 ${
+              bot.isActive ? 'text-emerald-400' : 'text-brand-blue'
+            }`}
+          >
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+              bot.isActive ? 'bg-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-gradient-to-r from-brand-blue to-brand-emerald'
+            }`}>
+              {bot.isActive ? (
+                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
+              ) : (
+                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" /></svg>
+              )}
+            </div>
+            <span className="text-[10px] font-medium">{bot.isActive ? 'Stop' : 'Start'}</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

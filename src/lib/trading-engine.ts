@@ -61,7 +61,7 @@ export interface TradeResult {
 
 export class TradingEngine {
   private markets: Map<string, MarketData> = new Map();
-  private signalThreshold = 55;
+  private signalThreshold = 45;
   public mlStrategy: AdaptiveStrategy;
 
   constructor() {
@@ -168,38 +168,38 @@ export class TradingEngine {
 
   analyzeMarket(data: MarketData): Signal | null {
     const prices = data.ticks.map((t) => t.quote);
-    if (prices.length < 30) return null;
+    if (prices.length < 15) return null;
 
     const sma5 = this.calculateSMA(prices, 5);
-    const sma20 = this.calculateSMA(prices, 20);
+    const sma10 = this.calculateSMA(prices, 10);
     const rsi = this.calculateRSI(prices);
-    const bollinger = this.calculateBollingerBands(prices);
+    const bollinger = this.calculateBollingerBands(prices, 15);
     const macd = this.calculateMACD(prices);
 
     const lastIndex = prices.length - 1;
     const prevIndex = lastIndex - 1;
 
     const currentSMA5 = sma5[lastIndex];
-    const currentSMA20 = sma20[lastIndex];
+    const currentSMA10 = sma10[lastIndex];
     const prevSMA5 = sma5[prevIndex];
-    const prevSMA20 = sma20[prevIndex];
+    const prevSMA10 = sma10[prevIndex];
     const currentRSI = rsi[lastIndex];
     const currentPrice = prices[lastIndex];
 
-    if (isNaN(currentSMA5) || isNaN(currentSMA20) || isNaN(currentRSI)) {
+    if (isNaN(currentSMA5) || isNaN(currentSMA10) || isNaN(currentRSI)) {
       return null;
     }
 
     let buyScore = 0;
     let sellScore = 0;
 
-    if (prevSMA5 <= prevSMA20 && currentSMA5 > currentSMA20) {
+    if (prevSMA5 <= prevSMA10 && currentSMA5 > currentSMA10) {
       buyScore += 30;
-    } else if (prevSMA5 >= prevSMA20 && currentSMA5 < currentSMA20) {
+    } else if (prevSMA5 >= prevSMA10 && currentSMA5 < currentSMA10) {
       sellScore += 30;
     }
 
-    if (currentSMA5 > currentSMA20) {
+    if (currentSMA5 > currentSMA10) {
       buyScore += 15;
     } else {
       sellScore += 15;
@@ -267,7 +267,7 @@ export class TradingEngine {
 
   analyzeDigitPattern(data: MarketData): Signal | null {
     const prices = data.ticks.map((t) => t.quote);
-    if (prices.length < 20) return null;
+    if (prices.length < 15) return null;
 
     const lastDigits = prices.slice(-20).map((p) => {
       const str = p.toFixed(2);
