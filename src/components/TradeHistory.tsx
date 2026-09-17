@@ -3,7 +3,8 @@
 import { useStore } from '@/lib/store';
 
 export default function TradeHistory() {
-  const { trades } = useStore();
+  const { bot } = useStore();
+  const trades = bot.trades;
 
   const totalPnl = trades.reduce((sum, t) => sum + (t.profitLoss || 0), 0);
   const wins = trades.filter((t) => (t.profitLoss || 0) > 0).length;

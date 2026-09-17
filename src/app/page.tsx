@@ -6,14 +6,14 @@ import { useStore } from '@/lib/store';
 
 export default function Home() {
   const router = useRouter();
-  const { login, setBalance } = useStore();
+  const { setAuth, setBalance } = useStore();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token1 = params.get('token1');
 
     if (token1) {
-      login(token1, false);
+      setAuth(token1, false);
       router.replace('/dashboard');
       return;
     }
@@ -23,7 +23,7 @@ export default function Home() {
       const hashParams = new URLSearchParams(hash.substring(1));
       const hashToken = hashParams.get('token1');
       if (hashToken) {
-        login(hashToken, false);
+        setAuth(hashToken, false);
         router.replace('/dashboard');
         return;
       }
@@ -32,7 +32,7 @@ export default function Home() {
     const allParams = new URLSearchParams(window.location.search);
     for (const [key, value] of allParams.entries()) {
       if (key.endsWith('_token') || key === 'token') {
-        login(value, false);
+        setAuth(value, false);
         router.replace('/dashboard');
         return;
       }

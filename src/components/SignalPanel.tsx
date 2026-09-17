@@ -3,7 +3,8 @@
 import { useStore } from '@/lib/store';
 
 export default function SignalPanel() {
-  const { signals } = useStore();
+  const { bot } = useStore();
+  const signals = bot.signals;
 
   return (
     <div className="space-y-4 sm:space-y-6">

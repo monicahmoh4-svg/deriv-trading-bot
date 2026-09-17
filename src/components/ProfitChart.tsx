@@ -4,12 +4,14 @@ import { useStore } from '@/lib/store';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function ProfitChart() {
-  const { pnlHistory, bot } = useStore();
+  const { bot } = useStore();
 
   let cumulative = 0;
-  const data = pnlHistory.map((entry, idx) => {
-    cumulative += entry.pnl;
-    return { name: `Trade ${idx + 1}`, profit: Math.round(cumulative * 100) / 100, pnl: entry.pnl };
+  const closedTrades = bot.trades.filter(t => t.status === 'closed');
+  const data = closedTrades.map((entry, idx) => {
+    const pnl = entry.profitLoss || 0;
+    cumulative += pnl;
+    return { name: `Trade ${idx + 1}`, profit: Math.round(cumulative * 100) / 100, pnl };
   });
 
   if (data.length === 0) {
