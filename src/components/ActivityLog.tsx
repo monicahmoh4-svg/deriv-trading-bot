@@ -31,7 +31,7 @@ export default function ActivityLog() {
               }`} />
               <div className="flex-1 min-w-0">
                 <div className="text-xs text-brand-text leading-relaxed truncate">{activity.message}</div>
-                <div className="text-[10px] text-brand-muted mt-0.5">{activity.timestamp.toLocaleTimeString()}</div>
+                <div className="text-[10px] text-brand-muted mt-0.5">{new Date(activity.timestamp).toLocaleTimeString()}</div>
               </div>
             </div>
           ))

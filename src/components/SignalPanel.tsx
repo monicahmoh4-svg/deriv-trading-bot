@@ -42,7 +42,7 @@ export default function SignalPanel() {
                   {signal.regime}
                 </div>
               )}
-              <div className="mt-2 text-[10px] text-brand-muted">{signal.timestamp.toLocaleTimeString()}</div>
+              <div className="mt-2 text-[10px] text-brand-muted">{new Date(signal.timestamp).toLocaleTimeString()}</div>
             </div>
           ))}
         </div>

@@ -63,14 +63,13 @@ export default function RulesPanel() {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-brand-muted uppercase tracking-wider mb-1.5">Min Confidence (%)</label>
+          <label className="block text-xs font-semibold text-brand-muted uppercase tracking-wider mb-1.5">Max Stake (USD)</label>
           <input
             type="number"
-            value={rules.minConfidence}
-            onChange={(e) => updateRules({ minConfidence: parseInt(e.target.value) || 60 })}
+            value={rules.maxStake}
+            onChange={(e) => updateRules({ maxStake: parseFloat(e.target.value) || 100 })}
             className="input-field"
-            min="10"
-            max="100"
+            min="1"
           />
         </div>
 
@@ -97,11 +96,11 @@ export default function RulesPanel() {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-brand-muted uppercase tracking-wider mb-1.5">Take Profit (USD)</label>
+          <label className="block text-xs font-semibold text-brand-muted uppercase tracking-wider mb-1.5">Target Profit (USD)</label>
           <input
             type="number"
-            value={rules.takeProfit}
-            onChange={(e) => updateRules({ takeProfit: parseFloat(e.target.value) || 100 })}
+            value={rules.targetProfit}
+            onChange={(e) => updateRules({ targetProfit: parseFloat(e.target.value) || 100 })}
             className="input-field"
             min="1"
           />
