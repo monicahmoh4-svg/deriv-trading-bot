@@ -390,7 +390,7 @@ export class DerivWebSocket {
   }
 }
 
-export const DERIV_APP_ID_DEFAULT = process.env.NEXT_PUBLIC_DERIV_APP_ID || '1014';
+export const DERIV_APP_ID_DEFAULT = process.env.NEXT_PUBLIC_DERIV_APP_ID || '34qzDfA7VIFtkjzTCvVDR';
 export const DERIV_REDIRECT_URI = process.env.NEXT_PUBLIC_DERIV_REDIRECT_URI || 'https://deriv-trading-bot-two.vercel.app';
 
 export function getDerivAppId(): string {

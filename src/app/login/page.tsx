@@ -1,59 +1,43 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
-
-const REDIRECT_URI = 'https://deriv-trading-bot-two.vercel.app';
-const STORAGE_KEY_APP_ID = 'deriv_bot_app_id';
-const STORAGE_KEY_LANDING = 'deriv_bot_landing';
-
-function getStoredAppId(): string {
-  if (typeof window === 'undefined') return '';
-  return localStorage.getItem(STORAGE_KEY_APP_ID) || '';
-}
-
-function getStoredLanding(): string {
-  if (typeof window === 'undefined') return '/';
-  return localStorage.getItem(STORAGE_KEY_LANDING) || '/';
-}
+import { getDerivAppId, DERIV_REDIRECT_URI, getDerivWebSocket } from '@/lib/deriv-websocket';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setAuth, setBalance } = useStore();
+  const { auth, setAuth, setBalance } = useStore();
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [appId, setAppId] = useState('');
-  const [step, setStep] = useState<'setup' | 'login'>('login');
 
   useEffect(() => {
-    const stored = getStoredAppId();
-    if (stored) {
-      setAppId(stored);
-      setStep('login');
+    if (auth.token) {
+      router.replace('/dashboard');
     }
+  }, [auth.token, router]);
+
+  useEffect(() => {
+    setAppId(getDerivAppId());
   }, []);
 
-  const handleOAuthLogin = useCallback((isDemo: boolean) => {
-    if (!appId.trim()) {
-      setError('Please enter your App ID first');
+  const handleOAuthLogin = (isDemo: boolean) => {
+    const id = getDerivAppId();
+    if (!id) {
+      setError('App ID not configured');
       return;
     }
-
-    localStorage.setItem(STORAGE_KEY_APP_ID, appId.trim());
-    localStorage.setItem(STORAGE_KEY_LANDING, window.location.href);
-
     const params = new URLSearchParams({
-      app_id: appId.trim(),
-      redirect_uri: REDIRECT_URI,
+      app_id: id,
+      redirect_uri: DERIV_REDIRECT_URI,
     });
     if (isDemo) {
       params.set('account_type', 'virtual');
     }
-
     window.location.href = `https://oauth.deriv.com/oauth2/authorize?${params.toString()}`;
-  }, [appId]);
+  };
 
   const handleTokenLogin = async () => {
     if (!token.trim()) {
@@ -65,8 +49,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const wsModule = await import('@/lib/deriv-websocket');
-      const ws = wsModule.getDerivWebSocket();
+      const ws = getDerivWebSocket();
       await ws.connect();
 
       let authResponse: Record<string, unknown>;
@@ -116,114 +99,9 @@ export default function LoginPage() {
       setError('Please enter a valid App ID');
       return;
     }
-    localStorage.setItem(STORAGE_KEY_APP_ID, appId.trim());
-    setStep('login');
+    localStorage.setItem('deriv_bot_app_id', appId.trim());
     setError('');
   };
-
-  const handleClearAppId = () => {
-    localStorage.removeItem(STORAGE_KEY_APP_ID);
-    setAppId('');
-    setStep('setup');
-  };
-
-  if (step === 'setup') {
-    return (
-      <div className="min-h-screen bg-brand-dark flex items-center justify-center p-4">
-        <div className="w-full max-w-lg">
-          <div className="text-center mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-blue to-brand-emerald flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-blue/20">
-              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold gradient-text">DerivBot</h1>
-            <p className="text-brand-muted text-sm mt-1">One-time setup to enable login with your Deriv credentials</p>
-          </div>
-
-          <div className="glass-card p-6 sm:p-8 space-y-5">
-            <div className="space-y-3">
-              <h2 className="text-sm font-bold text-white">Create Your Deriv App</h2>
-              <ol className="text-xs text-brand-muted space-y-2 list-decimal list-inside">
-                <li>
-                  Click the button below to open the Deriv Application Manager
-                </li>
-                <li>
-                  Click <span className="text-white font-medium">&quot;Register new application&quot;</span>
-                </li>
-                <li>
-                  Enter any name (e.g. &quot;My Trading Bot&quot;), accept terms
-                </li>
-                <li>
-                  In <span className="text-white font-medium">Redirect URL</span>, enter exactly:
-                  <div className="mt-1 p-2 rounded-lg bg-white/5 border border-white/10 font-mono text-[10px] text-brand-blue break-all">
-                    {REDIRECT_URI}
-                  </div>
-                </li>
-                <li>
-                  Select scopes: <span className="text-white font-medium">Read</span> and <span className="text-white font-medium">Trade</span>
-                </li>
-                <li>
-                  Click Create, then copy the <span className="text-white font-medium">App ID</span> (numeric)
-                </li>
-              </ol>
-
-              <a
-                href="https://api.deriv.com/my-apps"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold btn-primary"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-                Open Deriv App Manager
-              </a>
-            </div>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/10" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-brand-card px-3 text-brand-muted">paste your App ID below</span>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <input
-                type="text"
-                value={appId}
-                onChange={(e) => setAppId(e.target.value)}
-                placeholder="Deriv App ID (numeric, e.g. 12345)"
-                className="input-field text-sm"
-              />
-              <button
-                onClick={handleSaveAppId}
-                disabled={!appId.trim()}
-                className="w-full py-2.5 rounded-xl text-sm font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors disabled:opacity-40"
-              >
-                Save App ID & Continue
-              </button>
-            </div>
-
-            <p className="text-[10px] text-brand-muted text-center">
-              Or{' '}
-              <button onClick={() => { setStep('login'); }} className="text-brand-blue hover:text-brand-emerald transition-colors">
-                use an API token instead
-              </button>
-            </p>
-
-            {error && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center">
-                {error}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-brand-dark flex items-center justify-center p-4">
@@ -240,32 +118,28 @@ export default function LoginPage() {
 
         <div className="glass-card p-6 sm:p-8 space-y-6">
           <div className="space-y-3">
-            <p className="text-xs text-brand-muted text-center">Login with your Deriv account</p>
+            <p className="text-xs text-brand-muted text-center">Login with your Deriv account credentials</p>
 
             <button
               onClick={() => handleOAuthLogin(true)}
-              disabled={!appId.trim()}
-              className="w-full py-3 rounded-xl text-sm font-semibold bg-yellow-500/15 text-yellow-400 border border-yellow-500/25 hover:bg-yellow-500/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full py-3 rounded-xl text-sm font-semibold bg-yellow-500/15 text-yellow-400 border border-yellow-500/25 hover:bg-yellow-500/25 transition-colors flex items-center justify-center gap-2"
             >
-              Demo Account
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Connect Demo Account
             </button>
 
             <button
               onClick={() => handleOAuthLogin(false)}
-              disabled={!appId.trim()}
-              className="w-full py-3 rounded-xl text-sm font-semibold btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full py-3 rounded-xl text-sm font-semibold btn-primary flex items-center justify-center gap-2"
             >
-              Real Account
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              Connect Real Account
             </button>
-
-            {!appId.trim() && (
-              <button
-                onClick={() => setStep('setup')}
-                className="w-full py-2 rounded-xl text-[11px] text-brand-blue border border-brand-blue/20 hover:bg-brand-blue/10 transition-colors"
-              >
-                First time? Setup your Deriv app (one-time)
-              </button>
-            )}
           </div>
 
           <div className="relative">
@@ -308,27 +182,28 @@ export default function LoginPage() {
             </div>
           )}
 
-          <div className="text-[10px] text-brand-muted text-center space-y-1">
-            {appId.trim() && (
-              <p>
-                App ID: <span className="text-brand-blue">{appId}</span>
-                <button onClick={handleClearAppId} className="ml-2 text-brand-muted hover:text-red-400 transition-colors">
-                  change
-                </button>
-              </p>
-            )}
-            <p>
-              Get API token at{' '}
-              <a
-                href="https://app.deriv.com/account/api-token"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-brand-blue hover:text-brand-emerald transition-colors"
+          <details className="text-[10px] text-brand-muted">
+            <summary className="cursor-pointer hover:text-brand-blue transition-colors">Advanced: Change App ID</summary>
+            <div className="mt-2 space-y-2">
+              <input
+                type="text"
+                value={appId}
+                onChange={(e) => setAppId(e.target.value)}
+                placeholder="Deriv App ID"
+                className="input-field text-xs"
+              />
+              <button
+                onClick={handleSaveAppId}
+                className="w-full py-1.5 rounded-lg text-xs font-medium bg-white/5 text-brand-muted border border-white/10 hover:bg-white/10 transition-colors"
               >
-                app.deriv.com
-              </a>
-            </p>
-          </div>
+                Save
+              </button>
+              <p className="text-[9px] text-brand-muted/60">
+                Get your App ID from <a href="https://api.deriv.com/my-apps" target="_blank" rel="noopener noreferrer" className="text-brand-blue hover:underline">api.deriv.com/my-apps</a>
+                {' '} &middot; Redirect URI must be: <span className="text-brand-blue">{DERIV_REDIRECT_URI}</span>
+              </p>
+            </div>
+          </details>
         </div>
       </div>
     </div>

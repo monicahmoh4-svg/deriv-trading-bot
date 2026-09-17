@@ -6,7 +6,7 @@ import { useStore } from '@/lib/store';
 
 export default function Home() {
   const router = useRouter();
-  const { setAuth, setBalance } = useStore();
+  const { setAuth } = useStore();
 
   useEffect(() => {
     const url = window.location.href;
