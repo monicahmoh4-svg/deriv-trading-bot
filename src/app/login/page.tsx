@@ -36,29 +36,30 @@ export default function LoginPage() {
       const ws = wsModule.getDerivWebSocket();
       await ws.connect();
 
-      let authResponse;
+      let authResponse: Record<string, unknown>;
       try {
-        authResponse = await ws.authenticate(token.trim());
+        authResponse = (await ws.authenticate(token.trim())) as Record<string, unknown>;
       } catch {
         throw new Error('Failed to authenticate with token');
       }
 
       if (authResponse?.error) {
-        throw new Error(authResponse.error.message || 'Invalid token');
+        const errObj = authResponse.error as Record<string, unknown>;
+        throw new Error((errObj.message as string) || 'Invalid token');
       }
 
-      const authorizeData = authResponse?.authorize;
-      const balanceData = authResponse?.balance;
+      const authorizeData = authResponse?.authorize as Record<string, unknown> | undefined;
+      const balanceData = authResponse?.balance as Record<string, unknown> | undefined;
 
       let finalBalance = 0;
       let currency = 'USD';
 
       if (balanceData && typeof balanceData.balance === 'number') {
         finalBalance = balanceData.balance;
-        currency = balanceData.currency || 'USD';
-      } else if (authorizeData?.balance) {
+        currency = (balanceData.currency as string) || 'USD';
+      } else if (authorizeData?.balance && typeof authorizeData.balance === 'number') {
         finalBalance = authorizeData.balance;
-        currency = authorizeData.currency || 'USD';
+        currency = (authorizeData.currency as string) || 'USD';
       } else {
         try {
           const bal = await ws.getBalance();
@@ -69,7 +70,7 @@ export default function LoginPage() {
 
       setBalance(finalBalance, currency);
 
-      setAuth(token.trim(), authorizeData?.is_virtual || false);
+      setAuth(token.trim(), (authorizeData?.is_virtual as boolean) || false);
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
