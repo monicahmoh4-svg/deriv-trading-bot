@@ -5,6 +5,36 @@ import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { getDerivAppId, DERIV_REDIRECT_URI, getDerivWebSocket } from '@/lib/deriv-websocket';
 
+function generateRandomString(length: number): string {
+  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  let result = '';
+  const values = new Uint8Array(length);
+  crypto.getRandomValues(values);
+  for (let i = 0; i < length; i++) {
+    result += charset[values[i] % charset.length];
+  }
+  return result;
+}
+
+async function sha256(plain: string): Promise<ArrayBuffer> {
+  const encoder = new TextEncoder();
+  return crypto.subtle.digest('SHA-256', encoder.encode(plain));
+}
+
+function base64urlencode(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let str = '';
+  for (const byte of bytes) {
+    str += String.fromCharCode(byte);
+  }
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const hashed = await sha256(verifier);
+  return base64urlencode(hashed);
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { auth, setAuth, setBalance } = useStore();
@@ -23,20 +53,39 @@ export default function LoginPage() {
     setAppId(getDerivAppId());
   }, []);
 
-  const handleOAuthLogin = (isDemo: boolean) => {
+  const handleOAuthLogin = async (isDemo: boolean) => {
     const id = getDerivAppId();
     if (!id) {
       setError('App ID not configured');
       return;
     }
-    const params = new URLSearchParams({
-      app_id: id,
-      redirect_uri: DERIV_REDIRECT_URI,
-    });
-    if (isDemo) {
-      params.set('account_type', 'virtual');
+
+    try {
+      const state = generateRandomString(32);
+      const codeVerifier = generateRandomString(64);
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+      sessionStorage.setItem('deriv_oauth_state', state);
+      sessionStorage.setItem('deriv_code_verifier', codeVerifier);
+
+      const params = new URLSearchParams({
+        response_type: 'code',
+        client_id: id,
+        redirect_uri: DERIV_REDIRECT_URI,
+        scope: 'read',
+        state,
+        code_challenge: codeChallenge,
+        code_challenge_method: 'S256',
+      });
+
+      if (isDemo) {
+        params.set('account_type', 'virtual');
+      }
+
+      window.location.href = `https://auth.deriv.com/oauth2/auth?${params.toString()}`;
+    } catch {
+      setError('Failed to initialize login');
     }
-    window.location.href = `https://oauth.deriv.com/oauth2/authorize?${params.toString()}`;
   };
 
   const handleTokenLogin = async () => {
