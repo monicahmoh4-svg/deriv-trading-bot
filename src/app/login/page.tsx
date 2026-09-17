@@ -11,14 +11,13 @@ export default function LoginPage() {
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const REDIRECT_URI = DERIV_REDIRECT_URI;
+  const [showOAuth, setShowOAuth] = useState(false);
 
   const handleOAuthLogin = (isDemo: boolean) => {
     const app_id = DERIV_APP_ID;
-    const redirectUri = REDIRECT_URI.replace(/\/$/, '');
+    const redirectUri = DERIV_REDIRECT_URI.replace(/\/$/, '');
     const params = new URLSearchParams({
-      app_id: app_id,
+      app_id,
       redirect_uri: redirectUri,
     });
     if (isDemo) {
@@ -45,7 +44,7 @@ export default function LoginPage() {
       try {
         authResponse = (await ws.authenticate(token.trim())) as Record<string, unknown>;
       } catch {
-        throw new Error('Failed to authenticate with token');
+        throw new Error('Failed to authenticate. Check your token.');
       }
 
       if (authResponse?.error) {
@@ -54,27 +53,26 @@ export default function LoginPage() {
       }
 
       const authorizeData = authResponse?.authorize as Record<string, unknown> | undefined;
-      const balanceData = authResponse?.balance as Record<string, unknown> | undefined;
 
       let finalBalance = 0;
       let currency = 'USD';
 
-      if (balanceData && typeof balanceData.balance === 'number') {
-        finalBalance = balanceData.balance;
-        currency = (balanceData.currency as string) || 'USD';
-      } else if (authorizeData?.balance && typeof authorizeData.balance === 'number') {
-        finalBalance = authorizeData.balance;
-        currency = (authorizeData.currency as string) || 'USD';
-      } else {
-        try {
-          const bal = await ws.getBalance();
-          finalBalance = bal.balance || 0;
-          currency = bal.currency || 'USD';
-        } catch {}
+      try {
+        const bal = await ws.getBalance();
+        finalBalance = bal.balance || 0;
+        currency = bal.currency || 'USD';
+      } catch {
+        const balanceData = authResponse?.balance as Record<string, unknown> | undefined;
+        if (balanceData && typeof balanceData.balance === 'number') {
+          finalBalance = balanceData.balance;
+          currency = (balanceData.currency as string) || 'USD';
+        } else if (authorizeData?.balance && typeof authorizeData.balance === 'number') {
+          finalBalance = authorizeData.balance;
+          currency = (authorizeData.currency as string) || 'USD';
+        }
       }
 
       setBalance(finalBalance, currency);
-
       setAuth(token.trim(), (authorizeData?.is_virtual as boolean) || false);
       router.push('/dashboard');
     } catch (err) {
@@ -99,21 +97,32 @@ export default function LoginPage() {
 
         <div className="glass-card p-6 sm:p-8 space-y-6">
           <div className="space-y-3">
-            <p className="text-xs text-brand-muted text-center mb-2">Connect with Deriv Account</p>
+            <p className="text-xs text-brand-muted text-center mb-1">Connect with your Deriv Account</p>
 
-            <button
-              onClick={() => handleOAuthLogin(true)}
-              className="w-full py-3 rounded-xl text-sm font-semibold bg-yellow-500/15 text-yellow-400 border border-yellow-500/25 hover:bg-yellow-500/25 transition-colors"
-            >
-              Connect Demo Account
-            </button>
-
-            <button
-              onClick={() => handleOAuthLogin(false)}
-              className="w-full py-3 rounded-xl text-sm font-semibold btn-primary"
-            >
-              Connect Real Account
-            </button>
+            <div className="space-y-2">
+              <input
+                type="password"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="Paste your Deriv API token"
+                className="input-field text-sm"
+                onKeyDown={(e) => e.key === 'Enter' && handleTokenLogin()}
+              />
+              <button
+                onClick={handleTokenLogin}
+                disabled={loading || !token.trim()}
+                className="w-full py-3 rounded-xl text-sm font-semibold btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Connecting...
+                  </span>
+                ) : (
+                  'Connect & Start Trading'
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="relative">
@@ -121,28 +130,43 @@ export default function LoginPage() {
               <div className="w-full border-t border-white/10" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-brand-card px-3 text-brand-muted">or use API token</span>
+              <button
+                onClick={() => setShowOAuth(!showOAuth)}
+                className="bg-brand-card px-3 text-brand-muted hover:text-brand-blue transition-colors cursor-pointer"
+              >
+                {showOAuth ? 'Hide OAuth setup' : 'OAuth login (requires app registration)'}
+              </button>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div>
-              <input
-                type="password"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="Paste your Deriv API token"
-                className="input-field text-sm"
-              />
+          {showOAuth && (
+            <div className="space-y-3 p-3 rounded-xl bg-white/[0.03] border border-white/5">
+              <p className="text-[11px] text-brand-muted leading-relaxed">
+                OAuth requires a registered Deriv app. If you have one, click below:
+              </p>
+              <button
+                onClick={() => handleOAuthLogin(true)}
+                className="w-full py-2.5 rounded-xl text-sm font-semibold bg-yellow-500/15 text-yellow-400 border border-yellow-500/25 hover:bg-yellow-500/25 transition-colors"
+              >
+                Connect Demo Account (OAuth)
+              </button>
+              <button
+                onClick={() => handleOAuthLogin(false)}
+                className="w-full py-2.5 rounded-xl text-sm font-semibold bg-brand-blue/15 text-brand-blue border border-brand-blue/25 hover:bg-brand-blue/25 transition-colors"
+              >
+                Connect Real Account (OAuth)
+              </button>
+              <div className="text-[10px] text-brand-muted space-y-1 pt-1">
+                <p className="font-semibold text-brand-text">Setup steps:</p>
+                <ol className="list-decimal list-inside space-y-0.5">
+                  <li>Go to <a href="https://api.deriv.com/my-apps" target="_blank" rel="noopener noreferrer" className="text-brand-blue hover:underline">api.deriv.com/my-apps</a></li>
+                  <li>Create an app, add redirect URI:</li>
+                  <li className="pl-4 font-mono text-[9px] break-all">{DERIV_REDIRECT_URI}</li>
+                  <li>Set <code className="bg-white/10 px-1 rounded">NEXT_PUBLIC_DERIV_APP_ID</code> in Vercel env vars</li>
+                </ol>
+              </div>
             </div>
-            <button
-              onClick={handleTokenLogin}
-              disabled={loading}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold bg-white/5 text-brand-muted border border-white/10 hover:bg-white/10 transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Connecting...' : 'Connect with Token'}
-            </button>
-          </div>
+          )}
 
           {error && (
             <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs text-center">
@@ -150,17 +174,22 @@ export default function LoginPage() {
             </div>
           )}
 
-          <p className="text-[10px] text-brand-muted text-center">
-            Get your API token at{' '}
-            <a
-              href="https://app.deriv.com/account/api-token"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-brand-blue hover:text-brand-emerald transition-colors"
-            >
-              app.deriv.com
-            </a>
-          </p>
+          <div className="text-[10px] text-brand-muted text-center space-y-1">
+            <p>
+              Get your API token at{' '}
+              <a
+                href="https://app.deriv.com/account/api-token"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-brand-blue hover:text-brand-emerald transition-colors"
+              >
+                app.deriv.com
+              </a>
+            </p>
+            <p className="text-brand-muted/60">
+              Go to Settings → API Token → Generate with Read + Trade access
+            </p>
+          </div>
         </div>
       </div>
     </div>
