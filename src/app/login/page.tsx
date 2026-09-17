@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
-import { DERIV_APP_ID } from '@/lib/deriv-websocket';
+import { DERIV_APP_ID, DERIV_REDIRECT_URI } from '@/lib/deriv-websocket';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,14 +12,19 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const REDIRECT_URI = typeof window !== 'undefined'
-    ? `${window.location.origin}/`
-    : 'https://deriv-trading-bot-two.vercel.app/';
+  const REDIRECT_URI = DERIV_REDIRECT_URI;
 
   const handleOAuthLogin = (isDemo: boolean) => {
     const app_id = DERIV_APP_ID;
-    const derivAuthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${app_id}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}${isDemo ? '&account_type=virtual' : ''}`;
-    window.location.href = derivAuthUrl;
+    const redirectUri = REDIRECT_URI.replace(/\/$/, '');
+    const params = new URLSearchParams({
+      app_id: app_id,
+      redirect_uri: redirectUri,
+    });
+    if (isDemo) {
+      params.set('account_type', 'virtual');
+    }
+    window.location.href = `https://oauth.deriv.com/oauth2/authorize?${params.toString()}`;
   };
 
   const handleTokenLogin = async () => {

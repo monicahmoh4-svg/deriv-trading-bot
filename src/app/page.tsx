@@ -9,17 +9,10 @@ export default function Home() {
   const { setAuth, setBalance } = useStore();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token1 = params.get('token1');
-
-    if (token1) {
-      setAuth(token1, false);
-      router.replace('/dashboard');
-      return;
-    }
+    const url = window.location.href;
 
     const hash = window.location.hash;
-    if (hash.includes('token1=')) {
+    if (hash && hash.includes('token1=')) {
       const hashParams = new URLSearchParams(hash.substring(1));
       const hashToken = hashParams.get('token1');
       if (hashToken) {
@@ -29,10 +22,30 @@ export default function Home() {
       }
     }
 
+    const params = new URLSearchParams(window.location.search);
+    const token1 = params.get('token1');
+    if (token1) {
+      setAuth(token1, false);
+      router.replace('/dashboard');
+      return;
+    }
+
     const allParams = new URLSearchParams(window.location.search);
     for (const [key, value] of allParams.entries()) {
       if (key.endsWith('_token') || key === 'token') {
         setAuth(value, false);
+        router.replace('/dashboard');
+        return;
+      }
+    }
+
+    if (url.includes('#token1=')) {
+      const hashIdx = url.indexOf('#token1=');
+      const afterToken = url.substring(hashIdx + 9);
+      const tokenEnd = afterToken.indexOf('&');
+      const token = tokenEnd > -1 ? afterToken.substring(0, tokenEnd) : afterToken;
+      if (token) {
+        setAuth(token, false);
         router.replace('/dashboard');
         return;
       }
