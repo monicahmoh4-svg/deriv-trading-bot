@@ -13,12 +13,14 @@ export default function Home() {
 
     const hash = window.location.hash;
     if (hash && hash.includes('token1=')) {
-      const hashParams = new URLSearchParams(hash.substring(1));
-      const hashToken = hashParams.get('token1');
-      if (hashToken) {
-        setAuth(hashToken, false);
-        router.replace('/dashboard');
-        return;
+      const hashParts = hash.substring(1).split('&');
+      for (const part of hashParts) {
+        const [key, value] = part.split('=');
+        if (key === 'token1' && value) {
+          setAuth(decodeURIComponent(value), false);
+          router.replace('/dashboard');
+          return;
+        }
       }
     }
 
@@ -30,8 +32,7 @@ export default function Home() {
       return;
     }
 
-    const allParams = new URLSearchParams(window.location.search);
-    for (const [key, value] of allParams.entries()) {
+    for (const [key, value] of params.entries()) {
       if (key.endsWith('_token') || key === 'token') {
         setAuth(value, false);
         router.replace('/dashboard');
@@ -45,7 +46,7 @@ export default function Home() {
       const tokenEnd = afterToken.indexOf('&');
       const token = tokenEnd > -1 ? afterToken.substring(0, tokenEnd) : afterToken;
       if (token) {
-        setAuth(token, false);
+        setAuth(decodeURIComponent(token), false);
         router.replace('/dashboard');
         return;
       }

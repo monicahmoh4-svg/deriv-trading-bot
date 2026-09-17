@@ -390,14 +390,24 @@ export class DerivWebSocket {
   }
 }
 
-export const DERIV_APP_ID = process.env.NEXT_PUBLIC_DERIV_APP_ID || '1014';
+export const DERIV_APP_ID_DEFAULT = process.env.NEXT_PUBLIC_DERIV_APP_ID || '1014';
 export const DERIV_REDIRECT_URI = process.env.NEXT_PUBLIC_DERIV_REDIRECT_URI || 'https://deriv-trading-bot-two.vercel.app';
+
+export function getDerivAppId(): string {
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('deriv_bot_app_id');
+    if (stored) return stored;
+  }
+  return DERIV_APP_ID_DEFAULT;
+}
 
 let instance: DerivWebSocket | null = null;
 
 export function getDerivWebSocket(): DerivWebSocket {
   if (!instance) {
-    instance = new DerivWebSocket(DERIV_APP_ID);
+    instance = new DerivWebSocket(getDerivAppId());
   }
   return instance;
 }
+
+export const DERIV_APP_ID = getDerivAppId();
