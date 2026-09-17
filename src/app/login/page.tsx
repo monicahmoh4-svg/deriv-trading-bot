@@ -7,7 +7,7 @@ import { DERIV_APP_ID } from '@/lib/deriv-websocket';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, setBalance } = useStore();
+  const { setAuth, setBalance } = useStore();
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -69,7 +69,7 @@ export default function LoginPage() {
 
       setBalance(finalBalance, currency);
 
-      login(token.trim(), authorizeData?.is_virtual || false, authorizeData?.email);
+      setAuth(token.trim(), authorizeData?.is_virtual || false);
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
