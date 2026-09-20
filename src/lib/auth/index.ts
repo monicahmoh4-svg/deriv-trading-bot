@@ -11,8 +11,9 @@ export {
   getAuthInfo,
   clearAuthInfo,
   clearAllAuthData,
-  AuthInfo,
 } from './storage';
+
+export type { AuthInfo } from './storage';
 
 export {
   buildAuthorizationUrl,
@@ -23,6 +24,6 @@ export {
   handleOAuthCallback,
   cleanupUrl,
   OAuthError,
-  AuthConfig,
-  CallbackParams,
 } from './oauth';
+
+export type { AuthConfig, CallbackParams } from './oauth';
