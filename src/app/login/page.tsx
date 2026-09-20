@@ -4,36 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { getDerivAppId, DERIV_REDIRECT_URI, getDerivWebSocket } from '@/lib/deriv-websocket';
-
-function generateRandomString(length: number): string {
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-  let result = '';
-  const values = new Uint8Array(length);
-  crypto.getRandomValues(values);
-  for (let i = 0; i < length; i++) {
-    result += charset[values[i] % charset.length];
-  }
-  return result;
-}
-
-async function sha256(plain: string): Promise<ArrayBuffer> {
-  const encoder = new TextEncoder();
-  return crypto.subtle.digest('SHA-256', encoder.encode(plain));
-}
-
-function base64urlencode(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let str = '';
-  for (const byte of bytes) {
-    str += String.fromCharCode(byte);
-  }
-  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-async function generateCodeChallenge(verifier: string): Promise<string> {
-  const hashed = await sha256(verifier);
-  return base64urlencode(hashed);
-}
+import { initiateLogin } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -41,17 +12,12 @@ export default function LoginPage() {
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [appId, setAppId] = useState('');
 
   useEffect(() => {
     if (auth.token) {
       router.replace('/dashboard');
     }
   }, [auth.token, router]);
-
-  useEffect(() => {
-    setAppId(getDerivAppId());
-  }, []);
 
   const handleOAuthLogin = async (isDemo: boolean) => {
     const id = getDerivAppId();
@@ -61,28 +27,19 @@ export default function LoginPage() {
     }
 
     try {
-      const state = generateRandomString(32);
-      const codeVerifier = generateRandomString(64);
-      const codeChallenge = await generateCodeChallenge(codeVerifier);
-
-      sessionStorage.setItem('deriv_oauth_state', state);
-      sessionStorage.setItem('deriv_code_verifier', codeVerifier);
-
-      const params = new URLSearchParams({
-        response_type: 'code',
-        client_id: id,
-        redirect_uri: DERIV_REDIRECT_URI,
-        scope: 'read',
-        state,
-        code_challenge: codeChallenge,
-        code_challenge_method: 'S256',
-      });
+      const config = {
+        clientId: id,
+        redirectUri: DERIV_REDIRECT_URI,
+        scopes: 'trade',
+      };
 
       if (isDemo) {
-        params.set('account_type', 'virtual');
+        sessionStorage.setItem('deriv_account_type', 'virtual');
+      } else {
+        sessionStorage.setItem('deriv_account_type', 'real');
       }
 
-      window.location.href = `https://auth.deriv.com/oauth2/auth?${params.toString()}`;
+      await initiateLogin(config);
     } catch {
       setError('Failed to initialize login');
     }
@@ -141,15 +98,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSaveAppId = () => {
-    if (!appId.trim()) {
-      setError('Please enter a valid App ID');
-      return;
-    }
-    localStorage.setItem('deriv_bot_app_id', appId.trim());
-    setError('');
   };
 
   return (
@@ -230,29 +178,6 @@ export default function LoginPage() {
               {error}
             </div>
           )}
-
-          <details className="text-[10px] text-brand-muted">
-            <summary className="cursor-pointer hover:text-brand-blue transition-colors">Advanced: Change App ID</summary>
-            <div className="mt-2 space-y-2">
-              <input
-                type="text"
-                value={appId}
-                onChange={(e) => setAppId(e.target.value)}
-                placeholder="Deriv App ID"
-                className="input-field text-xs"
-              />
-              <button
-                onClick={handleSaveAppId}
-                className="w-full py-1.5 rounded-lg text-xs font-medium bg-white/5 text-brand-muted border border-white/10 hover:bg-white/10 transition-colors"
-              >
-                Save
-              </button>
-              <p className="text-[9px] text-brand-muted/60">
-                Get your App ID from <a href="https://api.deriv.com/my-apps" target="_blank" rel="noopener noreferrer" className="text-brand-blue hover:underline">api.deriv.com/my-apps</a>
-                {' '} &middot; Redirect URI must be: <span className="text-brand-blue">{DERIV_REDIRECT_URI}</span>
-              </p>
-            </div>
-          </details>
         </div>
       </div>
     </div>

@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
-import { getDerivAppId, DERIV_REDIRECT_URI } from '@/lib/deriv-websocket';
+import { getDerivAppId, DERIV_REDIRECT_URI, getDerivWebSocket } from '@/lib/deriv-websocket';
+import { handleOAuthCallback, cleanupUrl } from '@/lib/auth';
 
 export default function Home() {
   const router = useRouter();
@@ -40,71 +41,36 @@ export default function Home() {
 
       if (error) {
         setStatus('Authorization denied. Redirecting to login...');
+        cleanupUrl(window.location.origin);
         setTimeout(() => router.replace('/login'), 2000);
         return;
       }
 
       if (code && state) {
-        const storedState = sessionStorage.getItem('deriv_oauth_state');
-        const codeVerifier = sessionStorage.getItem('deriv_code_verifier');
-
-        sessionStorage.removeItem('deriv_oauth_state');
-        sessionStorage.removeItem('deriv_code_verifier');
-
-        if (state !== storedState) {
-          setStatus('Security verification failed. Redirecting to login...');
-          setTimeout(() => router.replace('/login'), 2000);
-          return;
-        }
-
-        if (!codeVerifier) {
-          setStatus('Session expired. Redirecting to login...');
-          setTimeout(() => router.replace('/login'), 2000);
-          return;
-        }
-
-        setStatus('Exchanging authorization code...');
+        setStatus('Exchanging authorization code for token...');
 
         try {
           const clientId = getDerivAppId();
           if (!clientId) throw new Error('App ID not configured');
 
-          const response = await fetch('/api/auth/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              code,
-              code_verifier: codeVerifier,
-              client_id: clientId,
-              redirect_uri: DERIV_REDIRECT_URI,
-            }),
+          const authInfo = await handleOAuthCallback(window.location.href, {
+            clientId,
+            redirectUri: DERIV_REDIRECT_URI,
+            scopes: 'trade',
           });
 
-          const data = await response.json();
-
-          if (!response.ok) {
-            const errMsg = (data as Record<string, unknown>).message || (data as Record<string, unknown>).error_description || 'Token exchange failed';
-            throw new Error(typeof errMsg === 'string' ? errMsg : 'Token exchange failed');
-          }
-
-          const accessToken = (data as Record<string, unknown>).access_token as string;
-          const refreshToken = (data as Record<string, unknown>).refresh_token as string;
-
-          if (!accessToken) {
+          if (!authInfo.access_token) {
             throw new Error('No access token received');
           }
 
-          if (refreshToken) {
-            localStorage.setItem('deriv_refresh_token', refreshToken);
-          }
+          setStatus('Authenticating with Deriv WebSocket...');
 
-          const { getDerivWebSocket } = await import('@/lib/deriv-websocket');
           const ws = getDerivWebSocket();
           await ws.connect();
 
           let authResponse: Record<string, unknown>;
           try {
-            authResponse = (await ws.authenticate(accessToken)) as Record<string, unknown>;
+            authResponse = (await ws.authenticate(authInfo.access_token)) as Record<string, unknown>;
           } catch {
             throw new Error('Failed to authenticate with access token');
           }
@@ -131,13 +97,19 @@ export default function Home() {
             }
           }
 
-          setBalance(finalBalance, currency);
-          setAuth(accessToken, (authorizeData?.is_virtual as boolean) || false);
+          const isVirtual = sessionStorage.getItem('deriv_account_type') === 'virtual' ||
+            (authorizeData?.is_virtual as boolean) ||
+            (typeof authorizeData?.loginid === 'string' && (authorizeData.loginid as string).startsWith('VRT'));
 
-          setStatus('Login successful! Redirecting...');
+          setBalance(finalBalance, currency);
+          setAuth(authInfo.access_token, isVirtual);
+
+          setStatus('Login successful! Redirecting to dashboard...');
           router.replace('/dashboard');
         } catch (err) {
+          console.error('OAuth callback error:', err);
           setStatus(err instanceof Error ? err.message : 'Login failed');
+          cleanupUrl(window.location.origin);
           setTimeout(() => router.replace('/login'), 3000);
         }
         return;
