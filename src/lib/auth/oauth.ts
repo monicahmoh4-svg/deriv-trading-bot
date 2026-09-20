@@ -108,33 +108,35 @@ export async function exchangeCodeForTokens(params: {
   redirectUri: string;
   codeVerifier: string;
 }): Promise<AuthInfo> {
-  const body = new URLSearchParams({
-    grant_type: 'authorization_code',
-    code: params.code,
-    client_id: params.clientId,
-    redirect_uri: params.redirectUri,
-    code_verifier: params.codeVerifier,
-  });
-
-  const response = await fetch(`${AUTH_BASE_URL}/token`, {
+  const response = await fetch('/api/auth/token', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code: params.code,
+      client_id: params.clientId,
+      redirect_uri: params.redirectUri,
+      code_verifier: params.codeVerifier,
+    }),
   });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new OAuthError(`Token exchange failed (${response.status}): ${errorBody}`);
-  }
 
   const tokenData = await response.json();
+
+  if (!response.ok) {
+    const errMsg = tokenData.error_description || tokenData.error || tokenData.message || 'Token exchange failed';
+    throw new OAuthError(`Token exchange failed (${response.status}): ${errMsg}`);
+  }
+
+  if (!tokenData.access_token) {
+    throw new OAuthError('No access_token in response');
+  }
+
   const authInfo: AuthInfo = {
     access_token: tokenData.access_token,
-    token_type: tokenData.token_type,
-    expires_in: tokenData.expires_in,
-    expires_at: tokenData.expires_at ?? Math.floor(Date.now() / 1000) + tokenData.expires_in,
-    scope: tokenData.scope,
-    refresh_token: tokenData.refresh_token,
+    token_type: tokenData.token_type ?? 'Bearer',
+    expires_in: tokenData.expires_in ?? 0,
+    expires_at: tokenData.expires_at ?? Math.floor(Date.now() / 1000) + (tokenData.expires_in ?? 3600),
+    scope: tokenData.scope ?? 'trade',
+    refresh_token: tokenData.refresh_token ?? '',
   };
 
   storeAuthInfo(authInfo);
