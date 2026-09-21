@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { getDerivAppId, DERIV_REDIRECT_URI, getDerivWebSocket } from '@/lib/deriv-websocket';
-import { initiateLogin } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,30 +18,20 @@ export default function LoginPage() {
     }
   }, [auth.token, router]);
 
-  const handleOAuthLogin = async (isDemo: boolean) => {
-    const id = getDerivAppId();
-    if (!id) {
+  const handleOAuthLogin = (isDemo: boolean) => {
+    const appId = getDerivAppId();
+    if (!appId) {
       setError('App ID not configured');
       return;
     }
 
-    try {
-      const config = {
-        clientId: id,
-        redirectUri: DERIV_REDIRECT_URI,
-        scopes: 'trade',
-      };
+    const params = new URLSearchParams({ app_id: appId });
 
-      if (isDemo) {
-        sessionStorage.setItem('deriv_account_type', 'virtual');
-      } else {
-        sessionStorage.setItem('deriv_account_type', 'real');
-      }
-
-      await initiateLogin(config);
-    } catch {
-      setError('Failed to initialize login');
+    if (isDemo) {
+      params.set('account_type', 'virtual');
     }
+
+    window.location.href = `https://oauth.deriv.com/oauth2/authorize?${params.toString()}`;
   };
 
   const handleTokenLogin = async () => {
